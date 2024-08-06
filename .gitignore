@@ -1,0 +1,51 @@
+# Ignore bundler config
+.bundle/
+
+# Ignore dependencies
+/vendor/bundle
+
+# Ignore local environment variables
+.env
+
+# Ignore database files
+/db/*.sqlite3
+/db/*.sqlite3-journal
+
+# Ignore log files
+/log/*.log
+/tmp
+
+# Ignore PID files
+/tmp/pids/*
+/tmp/sockets/*
+/tmp/cache/*
+
+# Ignore generated files
+/public/system
+/public/uploads
+
+# Ignore test coverage reports
+/coverage/
+
+# Ignore byebug command history file
+.byebug_history
+
+# Ignore gem files
+*.gem
+
+# Ignore the RubyMine IDE configuration
+.idea/
+
+# Ignore other IDE/editor specific files
+.vscode/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# Ignore macOS system files
+.DS_Store
+
+# Ignore other files and directories
+npm-debug.log*
+yarn-error.log*
