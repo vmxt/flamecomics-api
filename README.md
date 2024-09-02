@@ -24,7 +24,7 @@ bundle install
 3. Run server
 
 ```
-ruby app.rb // rerun 'app.rb' - automatically reload on changes
+ruby app.rb
 ```
 
 ## Endpoints
