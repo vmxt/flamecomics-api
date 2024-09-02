@@ -5,26 +5,27 @@ require_relative '../utils/variables'
 class ReadController
   def self.fetch_read(id)
     begin
-      url = "#{Variables::ORIGIN}#{id}"
+      url = "#{Variables::ORIGIN}/#{id}"
       response = HTTParty.get(url)
 
       if response.code != 200
-        raise "Status: #{response.code}"
+        raise "Failed to fetch data: Status #{response.code}"
       end
 
       data = response.body
       if data.nil? || data.empty?
-        raise 'Data is null'
+        raise 'Received empty response data'
       end
 
       document = Nokogiri::HTML(data)
 
+      title = document.at_css('h1.entry-title')&.text&.strip || 'Unknown'
       img_srcs = []
-      title = document.at_css('h1.entry-title').text.strip
 
       document.css('p img').each do |img|
         src = img['src']
         next if src.nil?
+
         next if src.include?('https://flamecomics.com/wp-content/uploads/2022/05/readonflamescans.png') ||
                 src.include?('https://flamecomics.com/wp-content/uploads/2022/07/999black-KTL.jpg') ||
                 src.include?('999black-KTL') ||

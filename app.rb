@@ -1,43 +1,42 @@
-require 'sinatra'
+require 'sinatra/base'
 require 'rack/cors'
 require 'httparty'
 require_relative 'router/routes'
 
-PORT = 8080
-DOWN = false
+class MyApp < Sinatra::Base
+  DOWN = false
 
-configure do
-  use Rack::Cors do
-    allow do
-      origins '*'
-      resource '*',
-        headers: :any,
-        methods: [:get, :post, :put, :patch, :delete, :options, :head]
+  configure do
+    use Rack::Cors do
+      allow do
+        origins '*'
+        resource '*',
+          headers: :any,
+          methods: [:get, :post, :put, :patch, :delete, :options, :head]
+      end
     end
   end
-end
 
-before do
-  content_type :json
-end
-
-if DOWN
   before do
-    halt 500, { status: 500, message: 'API is down.' }.to_json
+    content_type :json
   end
-end
 
-use Routes
+  if DOWN
+    before do
+      halt 500, { status: 500, message: 'API is down.' }.to_json
+    end
+  end
 
-not_found do
-  { error: 'Route not found' }.to_json
-end
+  use Routes
 
-error do
-  status 500
-  { error: env['sinatra.error'].message || 'Internal server error' }.to_json
-end
+  not_found do
+    { error: 'Route not found' }.to_json
+  end
 
-if __FILE__ == $0
-  Sinatra::Application.run! port: PORT
+  error do
+    status 500
+    { error: env['sinatra.error']&.message || 'Internal server error' }.to_json
+  end
+
+  run! if app_file == $0
 end

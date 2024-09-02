@@ -22,24 +22,22 @@ class HomeController
       trending = []
       latest_updates = []
 
-            # Scrape swiper-slide section
-            document.css('.swiper-slide').each do |elem|
-              title = elem.css('.sliderinfo .tt').text.strip
-              id = elem.css('a').attr('href').to_s.split('/').last
-              img = elem.css('.bigbanner').attr('style').to_s.scan(/url\(['"](.+?)['"]\)/).flatten.first
-              genres = elem.css('.slider-genres .sliderInfoGenre li').map(&:text).reject(&:empty?)
-      
-              next if title.empty? || id.empty? || img.nil? || genres.empty?
-      
-              spotlight << {
-                'title' => title,
-                'id' => id,
-                'img' => img,
-                'genre' => genres
-              }
-            end
+      document.css('.swiper-slide').each do |elem|
+        title = elem.css('.sliderinfo .tt').text.strip
+        id = elem.css('a').attr('href').to_s.split('/').last
+        img = elem.css('.bigbanner').attr('style').to_s.scan(/url\(['"](.+?)['"]\)/).flatten.first
+        genres = elem.css('.slider-genres .sliderInfoGenre li').map(&:text).reject(&:empty?)
+    
+        next if title.empty? || id.empty? || img.nil? || genres.empty?
+    
+        spotlight << {
+          'title' => title,
+          'id' => id,
+          'img' => img,
+          'genre' => genres
+        }
+      end
 
-      # Scrape bixbox.hothome section
       document.css('.bixbox.hothome').each do |elem|
         title = elem.css('h2').text.strip
         list = []
@@ -55,13 +53,15 @@ class HomeController
           item['rating'] = item['rating'] == '1010' ? 10 : item['rating'] ? item['rating'][0].to_i : item['rating']
           item['id'] = get_id_from_url(item['id'], true) if item['id']
 
+          item.delete('rating') if item['rating'].nil?
+          item.delete('status') if item['status'].nil?
+
           list << item
         end
 
         trending << { 'title' => title, 'list' => list }
       end
 
-      # Scrape latest-updates section
       document.css('.latest-updates .bs.styletere').each do |elem|
         title = elem.css('.info .tt').text.strip
         img = elem.css('.limit img').attr('src').to_s.empty? ? nil : elem.css('.limit img').attr('src').to_s

@@ -227,6 +227,8 @@ GET /read/:id
 ```json
 {
   "id": string,
+  "prevId": string,
+  "nextId": string,
   "title": string,
   "count": string.length,
   "imgSrcs": string
