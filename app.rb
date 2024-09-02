@@ -3,7 +3,7 @@ require 'rack/cors'
 require 'httparty'
 require_relative 'router/routes'
 
-PORT = 8000
+PORT = 8080
 DOWN = false
 
 configure do
