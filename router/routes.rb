@@ -19,43 +19,31 @@ class Routes < Sinatra::Base
   end
 
   get '/home' do
-    begin
-      data = HomeController.fetch_data
-      data.to_json
-    rescue StandardError => e
-      status 500
-      { error: "Error fetching data: #{e.message}" }.to_json
-    end
+    Home.fetch_data.to_json
+  rescue StandardError => e
+    status 500
+    { error: "Error fetching data: #{e.message}" }.to_json
   end
 
   get '/series/:id' do
-    begin
-      details = SeriesController.fetch_details(params[:id])
-      details.to_json
-    rescue StandardError => e
-      status 500
-      { error: "Error fetching data: #{e.message}" }.to_json
-    end
+    SeriesController.fetch_details(params[:id]).to_json
+  rescue StandardError => e
+    status 500
+    { error: "Error fetching data: #{e.message}" }.to_json
   end
 
   get '/series/:series_id/:chapter_id' do
-    begin
-      data = ReadController.fetch_read(params[:series_id], params[:chapter_id])
-      data.to_json
-    rescue StandardError => e
-      status 500
-      { error: "Error fetching data: #{e.message}" }.to_json
-    end
+    ReadController.fetch_read(params[:series_id], params[:chapter_id]).to_json
+  rescue StandardError => e
+    status 500
+    { error: "Error fetching data: #{e.message}" }.to_json
   end
 
   get '/browse' do
-    begin
-      query_string = request.query_string
-      series_data = BrowseController.fetch_series(query_string)
-      series_data.to_json
-    rescue StandardError => e
-      status 500
-      { error: "Error fetching data: #{e.message}" }.to_json
-    end
+    query_string = request.query_string
+    BrowseController.fetch_series(query_string).to_json
+  rescue StandardError => e
+    status 500
+    { error: "Error fetching data: #{e.message}" }.to_json
   end
 end
