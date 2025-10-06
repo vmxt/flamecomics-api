@@ -1,6 +1,5 @@
 require 'sinatra/base'
 require 'rack/cors'
-require 'httparty'
 require_relative 'router/routes'
 
 class MyApp < Sinatra::Base
@@ -11,20 +10,15 @@ class MyApp < Sinatra::Base
       allow do
         origins '*'
         resource '*',
-          headers: :any,
-          methods: [:get, :post, :put, :patch, :delete, :options, :head]
+                 headers: :any,
+                 methods: %i[get post put patch delete options head]
       end
     end
   end
 
   before do
     content_type :json
-  end
-
-  if DOWN
-    before do
-      halt 500, { status: 500, message: 'API is down.' }.to_json
-    end
+    halt 500, { status: 500, message: 'API is down.' }.to_json if DOWN
   end
 
   use Routes
