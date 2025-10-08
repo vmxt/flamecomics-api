@@ -1,6 +1,6 @@
 source 'https://rubygems.org'
 
-gem 'sinatra'
+gem 'roda'
 gem 'rack-cors'
 gem 'dotenv'
 gem 'httparty'

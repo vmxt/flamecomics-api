@@ -4,7 +4,7 @@
 
 Welcome to the Flamecomics manga scraper API. This API allows you to retrieve information about manga series, chapters, and images from the website.
 
-The base URL for this API is `http://localhost:4567`.
+The base port for this API is `9292`.
 
 ## Installation
 
@@ -24,14 +24,14 @@ bundle install
 3. Run server
 
 ```
-ruby app.rb
+puma
 ```
 
 ## Endpoints
 
 ### `/`
 
-Returns a JSON object containing a welcome message, API status, GitHub repository link, and creation date.
+Returns a JSON object containing a welcome message and API status.
 
 #### Request
 
@@ -65,18 +65,18 @@ GET /home
 {
   "spotlight": [
     {
-      "title": "string",
       "id": "string",
-      "img": "string",
+      "title": "string",
+      "img_url": "string",
       "genre": ["string", "..."]
     },
     ...
   ],
   "popular": [
     {
-      "title": "string",
       "id": "string",
-      "img": "string",
+      "title": "string",
+      "img_url": "string",
       "status": "string",
       "likes": number
     },
@@ -84,15 +84,15 @@ GET /home
   ],
   "latest_updates": [
     {
-      "title": "string",
-      "img": "string",
-      "status": "string",
       "id": "string",
+      "title": "string",
+      "img_url": "string",
+      "status": "string",
       "chapter": [
         {
-          "title": "string",
-          "id": "string",
-          "date": "string"
+          "chapter_id": "string",
+          "chapter_title": "string",
+          "chapter_date": "string"
         },
         ...
       ]
@@ -134,13 +134,12 @@ GET /series/:id
   "serialization": "string",
   "releaseYear": "string",
   "language": "string",
-  "officialUrl": "string",
   "synopsis": "string",
-  "chaptersCount": number,
+  "chapters_length": number,
   "chapters": [
     {
-      "id": "string",
-      "img": "string",
+      "chapter_id": "string",
+      "img_url": "string",
       "label": "string",
       "date": "string"
     },
@@ -149,32 +148,32 @@ GET /series/:id
 }
 ```
 
-### `/series/:series_id/:chapter_id`
+### `/series/:id/:chapter_id`
 
 Returns image URLs and information for a specific manga chapter.
 
 #### Request
 
 ```http
-GET /series/:series_id/:chapter_id
+GET /series/:id/:chapter_id
 ```
 
 #### Parameters
 
 | Parameter  | Required | Description                                        |
 | ---------  | -------- | -------------------------------------------------- |
-| series_id  | Yes      | The ID of the manga series                         |
-| chapter_id | Yes      | The ID of the manga series                         |
+| id         | Yes      | The ID of the manga series                         |
+| chapter_id | Yes      | The ID of the chapter                              |
 
 #### Response
 
 ```json
 {
-  "seriesId": "string",
-  "id": "string",
+  "series_id": "string",
+  "chapter_id": "string",
   "title": "string",
   "count": number,
-  "imgSrcs": ["string", "..."]
+  "img_srcs": ["string", "..."]
 }
 ```
 
@@ -192,18 +191,16 @@ GET /browse
 
 ```json
 {
-  "currentPage": number,
   "count": number,
   "comics": [
     {
       "id": "string",
       "title": "string",
-      "series_url": "string",
-      "thumbnail": "string",
+      "img_url": "string",
       "rating": number|null,
       "status": "string",
       "genres": ["string", "..."],
-      "description": "string"
+      "sypnosis": "string"
     },
     ...
   ]

@@ -1,47 +1,55 @@
-require 'sinatra/base'
+require 'roda'
 require_relative '../controllers/browse'
 require_relative '../controllers/home'
 require_relative '../controllers/read'
 require_relative '../controllers/series'
 
-class Routes < Sinatra::Base
-  before do
-    content_type :json
-  end
+class Routes < Roda
+  plugin :json
+  plugin :all_verbs
 
-  helpers do
-    def handle_errors
-      yield
-    rescue StandardError => e
-      status 500
-      { error: "Error fetching data: #{e.message}" }.to_json
+  route do |r|
+    r.root do
+      { message: 'Flamecomics Manga scraper', apiStatus: true, serverStatus: 'ONLINE' }
     end
-  end
 
-  get '/' do
-    {
-      message: 'Flamecomics Manga scraper',
-      apiStatus: true,
-      serverStatus: 'ONLINE'
-    }.to_json
-  end
+    r.on "home" do
+      begin
+        Home.fetch_data
+      rescue => e
+        response.status = 500
+        { error: e.message }
+      end
+    end
 
-  get '/home' do
-    handle_errors { Home.fetch_data.to_json }
-  end
+    r.on "series" do
+      r.get String do |id|
+        begin
+          SeriesController.fetch_details(id)
+        rescue => e
+          response.status = 500
+          { error: e.message }
+        end
+      end
 
-  get '/series/:id' do
-    handle_errors { SeriesController.fetch_details(params[:id]).to_json }
-  end
+      r.get String, String do |series_id, chapter_id|
+        begin
+          ReadController.fetch_read(series_id, chapter_id)
+        rescue => e
+          response.status = 500
+          { error: e.message }
+        end
+      end
+    end
 
-  get '/series/:series_id/:chapter_id' do
-    handle_errors { ReadController.fetch_read(params[:series_id], params[:chapter_id]).to_json }
-  end
-
-  get '/browse' do
-    handle_errors do
-      query_string = request.query_string
-      BrowseController.fetch_series(query_string).to_json
+    r.on "browse" do
+      begin
+        query_string = r.env['QUERY_STRING']
+        BrowseController.fetch_series(query_string)
+      rescue => e
+        response.status = 500
+        { error: e.message }
+      end
     end
   end
 end

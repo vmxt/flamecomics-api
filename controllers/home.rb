@@ -12,34 +12,32 @@ module Home
     response = HTTParty.get(url)
     raise "Failed to fetch data: HTTP #{response.code}" if response.code != 200
 
-    document        = Nokogiri::HTML(response.body)
-    spotlight       = []
-    popular         = []
-    latest_updates  = []
+    document = Nokogiri::HTML(response.body)
+    spotlight = []
+    popular = []
+    latest_updates = []
 
     document.css('.mantine-Carousel-slide').each do |elem|
       title = elem.css('h2.Carousel_infoTitle__9V64e').text.strip
-      link  = elem.at_css('a[href^="/series/"]')
-      id    = link ? link['href'].split('/').last : nil
-
+      link = elem.at_css('a[href^="/series/"]')
+      id = link ? link['href'].split('/').last : nil
       img_src = elem.at_css('img')&.[]('src')
       img_url = nil
 
       if img_src
-        uri   = URI.parse(img_src)
+        uri = URI.parse(img_src)
         query = URI.decode_www_form(uri.query || '').to_h
         img_url = query['url'] ? CGI.unescape(query['url']) : (img_src.start_with?('/') ? URI.join('https://cdn.flamecomics.xyz', img_src).to_s : img_src)
       end
 
       genres = elem.css('.mantine-Badge-root a').map(&:text).map(&:strip).reject(&:empty?)
-
       next if title.empty? || id.nil? || img_url.nil? || genres.empty?
 
       spotlight << {
-        'id'    => id,
-        'title' => title,
-        'img'   => img_url,
-        'genre' => genres
+        id:,
+        title:,
+        img_url:,
+        genres:
       }
     end
 
@@ -48,31 +46,29 @@ module Home
         link = elem.at_css('a[href^="/series/"]')
         next unless link
 
-        id    = link['href'].split('/').last
+        id = link['href'].split('/').last
         title = elem.at_css('p.mantine-Text-root')&.text&.strip || ''
-
         img_elem = elem.at_css('.SeriesCard_imageContainer__Tjx97 img')
-        img_src  = img_elem ? img_elem['src'] : nil
-        img_url  = nil
+        img_src = img_elem ? img_elem['src'] : nil
+        img_url = nil
 
         if img_src
-          uri   = URI.parse(img_src)
+          uri = URI.parse(img_src)
           query = URI.decode_www_form(uri.query || '').to_h
           img_url = query['url'] ? CGI.unescape(query['url']) : (img_src.start_with?('/') ? URI.join('https://cdn.flamecomics.xyz', img_src).to_s : img_src)
         end
 
-        status     = elem.at_css('.mantine-Badge-root[data-variant="outline"] .mantine-Badge-label')&.text&.strip
+        status = elem.at_css('.mantine-Badge-root[data-variant="outline"] .mantine-Badge-label')&.text&.strip
         likes_text = elem.at_css('svg.bi-heart-fill')&.parent&.text&.strip
-        likes      = likes_text.to_i if likes_text
-
+        likes = likes_text.to_i if likes_text
         next if title.empty? || id.nil? || img_url.nil?
 
         popular << {
-          'id'     => id,
-          'title'  => title,
-          'img'    => img_url,
-          'status' => status,
-          'likes'  => likes
+          id:,
+          title:,
+          img_url:,
+          status:,
+          likes:
         }
       end
     end
@@ -80,20 +76,17 @@ module Home
     document.css('.m_96bdd299.mantine-Grid-col').each do |elem|
       series_title_a = elem.at_css('a.mantine-Text-root[data-size="md"]')
       title = series_title_a&.text&.strip
-      id    = series_title_a&.[]('href')&.split('/')&.last
-
+      id = series_title_a&.[]('href')&.split('/')&.last
       next if title.nil? || title.empty? || id.nil? || id.empty?
 
       img_src = elem.at_css('img')&.attr('src')
       img_url = nil
-
       if img_src
         uri = URI.parse(img_src) rescue nil
         if uri&.query
           query = URI.decode_www_form(uri.query).to_h
           img_url = CGI.unescape(query['url']) if query['url']
         end
-
         img_url ||= img_src.start_with?('/') ? URI.join('https://cdn.flamecomics.xyz', img_src).to_s : img_src
       end
 
@@ -101,35 +94,35 @@ module Home
 
       chapters = elem.css("a[href*=\"/series/#{id}/\"]").map do |chapter_link|
         chapter_title = chapter_link.at_css('p')&.text&.strip
-        chapter_id    = chapter_link['href'].split('/').last
-        chapter_date  = chapter_link.at_css('p.SeriesCard_date__wbLsz')&.text&.strip
-
-        next if chapter_title.nil? || chapter_title.empty? ||
-                chapter_id.nil?    || chapter_id.empty?     ||
-                chapter_date.nil?  || chapter_date.empty?
-
+        chapter_id = chapter_link['href'].split('/').last
+        chapter_date = chapter_link.at_css('p.SeriesCard_date__wbLsz')&.text&.strip
+        next if chapter_title.nil? || chapter_title.empty? || chapter_id.nil? || chapter_id.empty? || chapter_date.nil? || chapter_date.empty?
         {
-          'id'    => chapter_id,
-          'title' => chapter_title,
-          'date'  => chapter_date
+          chapter_id: chapter_id,
+          chapter_title: chapter_title,
+          chapter_date: chapter_date
         }
       end.compact
 
       next if chapters.empty? || img_url.nil?
 
       latest_updates << {
-        'id'      => id,
-        'title'   => title,
-        'img'     => img_url,
-        'status'  => status,
-        'chapter' => chapters
+        id:,
+        title:,
+        img_url:,
+        status:,
+        chapters:
       }
     end
 
     {
-      'spotlight'      => spotlight,
-      'popular'        => popular,
+      'spotlight' => spotlight,
+      'popular' => popular,
       'latest_updates' => latest_updates
     }
   end
+end
+
+if __FILE__ == $0
+  puts JSON.pretty_generate(Home.fetch_data)
 end

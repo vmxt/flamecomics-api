@@ -76,7 +76,7 @@ class BrowseController
         rating:,
         status:,
         genres:,
-        description:
+        sypnosis: description
       }
     end
 

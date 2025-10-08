@@ -1,36 +1,20 @@
-require 'sinatra/base'
+require 'roda'
 require 'rack/cors'
+require 'json'
 require_relative 'router/routes'
 
-class MyApp < Sinatra::Base
-  DOWN = false
+class FlamecomicsAPI < Roda
+  plugin :json
+  plugin :all_verbs
 
-  configure do
-    use Rack::Cors do
-      allow do
-        origins '*'
-        resource '*',
-                 headers: :any,
-                 methods: %i[get post put patch delete options head]
-      end
+  use Rack::Cors do |config|
+    config.allow do |allow|
+      allow.origins '*'
+      allow.resource '*', headers: :any, methods: [:get, :post, :put, :patch, :delete, :options, :head]
     end
   end
 
-  before do
-    content_type :json
-    halt 500, { status: 500, message: 'API is down.' }.to_json if DOWN
+  route do |r|
+    r.run Routes
   end
-
-  use Routes
-
-  not_found do
-    { error: 'Route not found' }.to_json
-  end
-
-  error do
-    status 500
-    { error: env['sinatra.error']&.message || 'Internal server error' }.to_json
-  end
-
-  run! if app_file == $0
 end

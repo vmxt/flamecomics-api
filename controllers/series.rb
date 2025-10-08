@@ -45,10 +45,6 @@ class SeriesController
       release_year  = info['Release Year'] || 'Unknown'
       language      = info['Language']     || 'Unknown'
 
-      official_url = document.at_css(
-        'a.mantine-Button-root[href*="manga.bilibili.com/detail"]'
-      )&.[]('href') || 'Unknown'
-
       img_src = document.at_css('img.SeriesPage_cover__j6TrW')&.[]('src')
       poster_src = 'Unknown'
 
@@ -74,29 +70,28 @@ class SeriesController
         end
 
         {
-          id:    chapter_id,
-          img:   thumbnail_url,
+          chapter_id:,
+          img_url:   thumbnail_url,
           label: ch.at_css('p[data-size="md"]')&.text&.strip || 'Unknown',
           date:  ch.at_css('p[data-size="xs"]')&.text&.strip || 'Unknown'
         }
       end
 
       {
-        title:              title,
-        alternativeTitles:  alternative_titles,
-        posterSrc:          poster_src,
-        genres:             genres,
-        type:               type,
-        status:             status,
-        author:             author,
-        artist:             artist,
-        serialization:      serialization,
-        releaseYear:        release_year,
-        language:           language,
-        officialUrl:        official_url,
-        synopsis:           synopsis,
-        chaptersCount:      chapters.length,
-        chapters:           chapters
+        title:,
+        alternative_titles:,
+        poster_src:,
+        genres:,
+        type:,
+        status:,
+        author:,
+        artist:,
+        serialization:,
+        release_year:,
+        language:,
+        synopsis:,
+        chapters_length: chapters.length,
+        chapters:
       }
 
     rescue StandardError => e

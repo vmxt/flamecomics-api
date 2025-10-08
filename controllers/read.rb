@@ -35,11 +35,11 @@ class ReadController
     end
 
     {
-      seriesId: series_id,
-      id:       chapter_id,
-      title:    title,
-      count:    img_srcs.length,
-      imgSrcs:  img_srcs
+      series_id:,
+      chapter_id:,
+      title:,
+      count:  img_srcs.length,
+      img_srcs:
     }
 
   rescue StandardError => e
