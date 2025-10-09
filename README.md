@@ -27,6 +27,12 @@ bundle install
 puma
 ```
 
+4. Test server
+
+```
+bundle exec rspec
+```
+
 ## Endpoints
 
 ### `/`
