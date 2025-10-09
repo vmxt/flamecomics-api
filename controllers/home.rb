@@ -125,7 +125,3 @@ module Home
     end
   end
 end
-
-if __FILE__ == $0
-  puts JSON.pretty_generate(Home.fetch_data)
-end
