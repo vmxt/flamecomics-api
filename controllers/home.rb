@@ -35,7 +35,12 @@ module Home
         genres = elem.css('.mantine-Badge-root a').map(&:text).map(&:strip).reject(&:empty?)
         next if title.empty? || id.nil? || img_url.nil? || genres.empty?
 
-        spotlight << { id:, title:, img_url:, genres: }
+        spotlight << { 
+          id:, 
+          title:, 
+          img_url:, 
+          genres: 
+        }
       end
 
       if (popular_section = document.at_css('#Popular'))
@@ -61,7 +66,13 @@ module Home
           likes = likes_text.to_i if likes_text
           next if title.empty? || id.nil? || img_url.nil?
 
-          popular << { id:, title:, img_url:, status:, likes: }
+          popular << { 
+            id:, 
+            title:, 
+            img_url:, 
+            status:, 
+            likes: 
+          }
         end
       end
 
@@ -94,7 +105,13 @@ module Home
 
         next if chapters.empty? || img_url.nil?
 
-        latest_updates << { id:, title:, img_url:, status:, chapters: }
+        latest_updates << { 
+          id:, 
+          title:, 
+          img_url:, 
+          status:, 
+          chapters: 
+        }
       end
 
       {
