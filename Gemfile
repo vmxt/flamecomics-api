@@ -6,3 +6,8 @@ gem 'dotenv'
 gem 'httparty'
 gem 'nokogiri'
 gem 'puma'
+
+group :development, :test do
+  gem 'rspec'
+  gem 'rack-test'
+end
