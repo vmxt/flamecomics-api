@@ -222,6 +222,34 @@ GET /browse
 }
 ```
 
+```http
+GET /search?title=<search_term>
+```
+
+| Parameter  | Required | Description                                        |
+| ---------  | -------- | -------------------------------------------------- |
+| title      | Yes      | Part or full title to retrieve series              |
+
+#### Response
+
+```json
+{
+  "count": number,
+  "results": [
+    {
+      "id": "string",
+      "title": "string",
+      "img_url": "string",
+      "rating": number|null,
+      "status": "string",
+      "genres": ["string", "..."],
+      "sypnosis": "string"
+    },
+    ...
+  ]
+}
+```
+
 ## Error Responses
 
 The API may return error responses with the following structure:
