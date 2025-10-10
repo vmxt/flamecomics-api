@@ -222,6 +222,10 @@ GET /browse
 }
 ```
 
+### `/search`
+
+Search manga series by title.
+
 ```http
 GET /search?title=<search_term>
 ```
