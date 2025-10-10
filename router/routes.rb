@@ -8,6 +8,7 @@ require_relative '../controllers/search'
 class Routes < Roda
   plugin :json
   plugin :all_verbs
+  plugin :slash_path_empty
 
   route do |r|
     r.root do
