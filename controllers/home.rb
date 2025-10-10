@@ -19,7 +19,7 @@ module Home
       latest_updates = []
 
       document.css('.mantine-Carousel-slide').each do |elem|
-        title = elem.css('h2.Carousel_infoTitle__9V64e').text.strip
+        title = elem.css('h3.Carousel_infoTitle__9V64e, h2.Carousel_infoTitle__9V64e').text.strip
         link = elem.at_css('a[href^="/series/"]')
         id = link ? link['href'].split('/').last : nil
         img_src = elem.at_css('img')&.[]('src')
@@ -29,7 +29,7 @@ module Home
           uri = URI.parse(img_src)
           query = URI.decode_www_form(uri.query || '').to_h
           img_url = query['url'] ? CGI.unescape(query['url']) :
-                     (img_src.start_with?('/') ? URI.join('https://cdn.flamecomics.xyz', img_src).to_s : img_src)
+                    (img_src.start_with?('/') ? URI.join('https://cdn.flamecomics.xyz', img_src).to_s : img_src)
         end
 
         genres = elem.css('.mantine-Badge-root a').map(&:text).map(&:strip).reject(&:empty?)
@@ -39,11 +39,11 @@ module Home
           id:, 
           title:, 
           img_url:, 
-          genres: 
+          genres:
         }
       end
 
-      if (popular_section = document.at_css('#Popular'))
+      if (popular_section = document.at_css('#popular'))
         popular_section.css('.mantine-Grid-col').each do |elem|
           link = elem.at_css('a[href^="/series/"]')
           next unless link
@@ -58,20 +58,27 @@ module Home
             uri = URI.parse(img_src)
             query = URI.decode_www_form(uri.query || '').to_h
             img_url = query['url'] ? CGI.unescape(query['url']) :
-                       (img_src.start_with?('/') ? URI.join('https://cdn.flamecomics.xyz', img_src).to_s : img_src)
+                      (img_src.start_with?('/') ? URI.join('https://cdn.flamecomics.xyz', img_src).to_s : img_src)
           end
 
           status = elem.at_css('.mantine-Badge-root[data-variant="outline"] .mantine-Badge-label')&.text&.strip
           likes_text = elem.at_css('svg.bi-heart-fill')&.parent&.text&.strip
-          likes = likes_text.to_i if likes_text
+          likes = if likes_text
+            if likes_text.include?('K')
+              (likes_text.delete('K').to_f * 1000).to_i
+            else
+              likes_text.gsub(/[^\d]/, '').to_i
+            end
+          end
+
           next if title.empty? || id.nil? || img_url.nil?
 
-          popular << { 
-            id:, 
-            title:, 
-            img_url:, 
-            status:, 
-            likes: 
+          popular << {
+            id: id,
+            title: title,
+            img_url: img_url,
+            status: status,
+            likes: likes
           }
         end
       end
