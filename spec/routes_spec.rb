@@ -58,6 +58,52 @@ RSpec.describe 'FlamecomicsAPI Routes' do
     end
   end
 
+  # ✅ NEW TESTS FOR /search
+  describe 'GET /search' do
+    let(:mock_data) do
+      {
+        comics: [
+          { title: "Omniscient Reader's Viewpoint", id: 1 },
+          { title: "Leveling With The Gods", id: 2 },
+          { title: "Return of The Frozen Player", id: 3 }
+        ]
+      }
+    end
+
+    before do
+      allow(BrowseController).to receive(:fetch_series).and_return(mock_data)
+    end
+
+    it 'returns matching search results' do
+      get '/search', { title: 'Frozen' }
+      expect(last_response.status).to eq(200)
+      body = JSON.parse(last_response.body)
+      expect(body["count"]).to eq(1)
+      expect(body["results"].first["title"]).to eq("Return of The Frozen Player")
+    end
+
+    it 'is case-insensitive' do
+      get '/search', { title: 'omniscient reader' }
+      body = JSON.parse(last_response.body)
+      expect(body["count"]).to eq(1)
+      expect(body["results"].first["title"]).to eq("Omniscient Reader's Viewpoint")
+    end
+
+    it 'returns an error when title param is missing' do
+      get '/search'
+      expect(last_response.status).to eq(400).or eq(200) # depends on your controller response
+      body = JSON.parse(last_response.body)
+      expect(body["error"]).to match(/Missing title parameter/)
+    end
+
+    it 'returns an error when BrowseController fails' do
+      allow(BrowseController).to receive(:fetch_series).and_return({ error: "Failed to fetch series" })
+      get '/search', { title: 'Leveling' }
+      body = JSON.parse(last_response.body)
+      expect(body["error"]).to eq("Failed to fetch series")
+    end
+  end
+
   describe 'GET /invalid' do
     it 'returns 404 for invalid route' do
       get '/invalid'
