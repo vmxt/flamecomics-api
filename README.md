@@ -87,6 +87,15 @@ GET /home
       "likes": number
     },
     ...
+  "staff_picks": [
+    {
+      "id": "string",
+      "title": "string",
+      "img_url": "string",
+      "status": "string",
+      "likes": number
+    },
+    ...
   ],
   "latest_updates": [
     {
