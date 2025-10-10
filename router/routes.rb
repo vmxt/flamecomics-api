@@ -3,6 +3,7 @@ require_relative '../controllers/browse'
 require_relative '../controllers/home'
 require_relative '../controllers/read'
 require_relative '../controllers/series'
+require_relative '../controllers/search'
 
 class Routes < Roda
   plugin :json
@@ -49,6 +50,18 @@ class Routes < Roda
       rescue => e
         response.status = 500
         { error: e.message }
+      end
+    end
+
+    r.on "search" do
+      r.get do
+        begin
+          title = r.params["title"]
+          SearchController.search_by_title(title)
+        rescue => e
+          response.status = 500
+          { error: e.message }
+        end
       end
     end
   end
