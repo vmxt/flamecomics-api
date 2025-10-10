@@ -4,7 +4,6 @@ GEM
     bigdecimal (3.3.0)
     csv (3.3.5)
     diff-lcs (1.6.2)
-    dotenv (3.1.8)
     httparty (0.23.2)
       csv
       mini_mime (>= 1.0.0)
@@ -66,7 +65,6 @@ PLATFORMS
   x86_64-linux-musl
 
 DEPENDENCIES
-  dotenv
   httparty
   nokogiri
   puma
