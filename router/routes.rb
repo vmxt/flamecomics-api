@@ -8,7 +8,12 @@ require_relative '../controllers/search'
 class Routes < Roda
   plugin :json
   plugin :all_verbs
-  plugin :slash_path_empty
+  plugin :error_handler
+
+  error do |e|
+    response.status = 500
+    { error: e.message }
+  end
 
   route do |r|
     r.root do
@@ -16,53 +21,26 @@ class Routes < Roda
     end
 
     r.on "home" do
-      begin
-        Home.fetch_data
-      rescue => e
-        response.status = 500
-        { error: e.message }
-      end
+      Home.fetch_data
     end
 
     r.on "series" do
-      r.get String do |id|
-        begin
-          SeriesController.fetch_details(id)
-        rescue => e
-          response.status = 500
-          { error: e.message }
-        end
+      r.get String, String do |series_id, chapter_id|
+        ReadController.fetch_read(series_id, chapter_id)
       end
 
-      r.get String, String do |series_id, chapter_id|
-        begin
-          ReadController.fetch_read(series_id, chapter_id)
-        rescue => e
-          response.status = 500
-          { error: e.message }
-        end
+      r.get String do |id|
+        SeriesController.fetch_details(id)
       end
     end
 
     r.on "browse" do
-      begin
-        query_string = r.env['QUERY_STRING']
-        BrowseController.fetch_series(query_string)
-      rescue => e
-        response.status = 500
-        { error: e.message }
-      end
+      BrowseController.fetch_series(r.env['QUERY_STRING'])
     end
 
     r.on "search" do
       r.get do
-        begin
-          title = r.params["title"]
-          SearchController.search_by_title(title)
-        rescue => e
-          response.status = 500
-          { error: e.message }
-        end
+        SearchController.search_by_title(r.params["title"])
       end
     end
   end
