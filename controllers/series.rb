@@ -5,97 +5,68 @@ require_relative '../utils/variables'
 
 class SeriesController
   def self.fetch_details(id)
-    begin
-      url = "#{Variables::ORIGIN}/series/#{id}"
-      response = HTTParty.get(url)
-      raise "Failed to fetch details: Status #{response.code}" unless response.code == 200
+    url = "#{Variables::ORIGIN}/series/#{id}"
+    response = HTTParty.get(url)
+    raise "Failed to fetch details: Status #{response.code}" unless response.code == 200
 
-      document = Nokogiri::HTML(response.body)
+    doc = Nokogiri::HTML(response.body)
 
-      title              = document.at_css('h1.mantine-Title-root')&.text&.strip          || 'Unknown'
-      alternative_titles = document.at_css('.SeriesPage_altTitles__UI8Ij')&.text&.strip   || 'Unknown'
+    title = doc.at_css('h1.mantine-Title-root')&.text&.strip || 'Unknown'
+    alt_titles = doc.at_css('.SeriesPage_altTitles__UI8Ij')&.text&.strip || 'Unknown'
+    status = doc.css('.mantine-Badge-root').find { |b| b.text.match?(/Ongoing|Dropped|Completed/i) }&.text&.strip || 'Unknown'
+    genres = doc.css('.SeriesPage_badge__ZSRhM span.mantine-Badge-label').map { |g| g.text.strip }
 
-      status = document.css('.mantine-Badge-root').find do |badge|
-        badge.text.strip.match?(/Ongoing|Dropped|Completed/i)
-      end&.text&.strip || 'Unknown'
+    raw_synopsis = doc.css('div.SeriesPage_paper__mf3li p.mantine-Text-root').find { |p| p.inner_html.include?('&lt;p&gt;') }&.inner_html || ''
+    synopsis = Nokogiri::HTML.fragment(raw_synopsis.gsub('&lt;', '<').gsub('&gt;', '>')).text.strip rescue 'Unknown'
 
-      genres = document.css('.SeriesPage_badge__ZSRhM span.mantine-Badge-label').map do |g|
-        g.text.strip
-      end
+    info = doc.css('div.SeriesPage_paper__mf3li').each_with_object({}) do |div, h|
+      key = div.at_css('p.SeriesPage_infoField__KolqF')&.text&.strip
+      val = div.at_css('p.SeriesPage_infoValue__kbVfH')&.text&.strip
+      h[key] = val if key && val
+    end
 
-      raw_synopsis = document.css('div.SeriesPage_paper__mf3li p.mantine-Text-root').find do |p|
-        p.inner_html.include?('&lt;p&gt;')
-      end&.inner_html || ''
+    img_src = doc.at_css('img.SeriesPage_cover__j6TrW')&.[]('src')
+    poster_src = parse_image(img_src)
 
-      synopsis = Nokogiri::HTML.fragment(
-        raw_synopsis.gsub('&lt;', '<').gsub('&gt;', '>')
-      ).text.strip rescue 'Unknown'
-
-      info = {}
-      document.css('div.SeriesPage_paper__mf3li').each do |div|
-        key = div.at_css('p.SeriesPage_infoField__KolqF')&.text&.strip
-        val = div.at_css('p.SeriesPage_infoValue__kbVfH')&.text&.strip
-        info[key] = val if key && val
-      end
-
-      author        = info['Author']       || 'Unknown'
-      artist        = info['Artist']       || 'Unknown'
-      serialization = info['Publisher']    || 'Unknown'
-      type          = info['Type']         || 'Unknown'
-      release_year  = info['Release Year'] || 'Unknown'
-      language      = info['Language']     || 'Unknown'
-
-      img_src = document.at_css('img.SeriesPage_cover__j6TrW')&.[]('src')
-      poster_src = 'Unknown'
-
-      if img_src
-        query = img_src.split('?')[1]
-        if query
-          params = URI.decode_www_form(query)
-          url_param = params.find { |k, _| k == 'url' }
-          poster_src = url_param[1] if url_param
-        end
-      end
-
-      chapters = document.css('a.ChapterCard_chapterWrapper__YjOzx').map do |ch|
-        href       = ch['href']
-        chapter_id = href&.sub(%r{^/series/#{id}/}, '')
-
-        thumbnail_elem = ch.at_css('.ChapterCard_chapterThumbnail__bik6B img')
-        if thumbnail_elem
-          thumbnail_url = thumbnail_elem['src']
-        else
-          style         = ch.at_css('.ChapterCard_chapterThumbnail__bik6B')&.[]('style') || ''
-          thumbnail_url = style.match(/url\(['"]?(.*?)['"]?\)/)&.captures&.first
-        end
-
-        {
-          chapter_id:,
-          img_url:   thumbnail_url,
-          label: ch.at_css('p[data-size="md"]')&.text&.strip || 'Unknown',
-          date:  ch.at_css('p[data-size="xs"]')&.text&.strip || 'Unknown'
-        }
-      end
+    chapters = doc.css('a.ChapterCard_chapterWrapper__YjOzx').map do |ch|
+      href = ch['href']
+      chapter_id = href&.sub(%r{^/series/#{id}/}, '')
+      thumb = ch.at_css('.ChapterCard_chapterThumbnail__bik6B img')&.[]('src') ||
+              ch.at_css('.ChapterCard_chapterThumbnail__bik6B')&.[]('style')&.match(/url\(['"]?(.*?)['"]?\)/)&.captures&.first
 
       {
-        title:,
-        alternative_titles:,
-        poster_src:,
-        genres:,
-        type:,
-        status:,
-        author:,
-        artist:,
-        serialization:,
-        release_year:,
-        language:,
-        synopsis:,
-        chapters_length: chapters.length,
-        chapters:
+        chapter_id: chapter_id,
+        img_url: thumb,
+        label: ch.at_css('p[data-size="md"]')&.text&.strip || 'Unknown',
+        date:  ch.at_css('p[data-size="xs"]')&.text&.strip || 'Unknown'
       }
-
-    rescue StandardError => e
-      { error: "Error fetching details: #{e.message}" }
     end
+
+    {
+      title:,
+      alternative_titles: alt_titles,
+      poster_src:,
+      genres:,
+      type: info['Type'] || 'Unknown',
+      status:,
+      author: info['Author'] || 'Unknown',
+      artist: info['Artist'] || 'Unknown',
+      serialization: info['Publisher'] || 'Unknown',
+      release_year: info['Release Year'] || 'Unknown',
+      language: info['Language'] || 'Unknown',
+      synopsis:,
+      chapters_length: chapters.size,
+      chapters:
+    }
+  rescue => e
+    { error: "Error fetching details: #{e.message}" }
+  end
+
+  private_class_method def self.parse_image(src)
+    return 'Unknown' unless src
+    uri = URI.parse(src) rescue nil
+    return src unless uri&.query
+    query = URI.decode_www_form(uri.query).to_h
+    query['url'] ? CGI.unescape(query['url']) : src
   end
 end
