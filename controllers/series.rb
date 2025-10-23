@@ -1,9 +1,15 @@
 require 'httparty'
 require 'nokogiri'
 require 'uri'
+require 'cgi'
+require 'time'
 require_relative '../utils/variables'
+require_relative '../utils/image_helper'
+require_relative '../utils/time_helper'
 
 class SeriesController
+  extend ImageHelper
+
   def self.fetch_details(id)
     url = "#{Variables::ORIGIN}/series/#{id}"
     response = HTTParty.get(url)
@@ -33,56 +39,48 @@ class SeriesController
       h[key] = val if key && val
     end
 
-    img_src = doc.at_css('img.SeriesPage_cover__j6TrW')&.[]('src')
-    poster_src = parse_image(img_src)
+    img_src = doc.at_css('img.SeriesPage_cover__j6TrW')&.[]('src') ||
+              doc.at_css('img[data-role="cover"]')&.[]('src') ||
+              doc.at_css('img.mantine-Image-image')&.[]('src')
+    poster_src = normalize_image_url(img_src)
 
     chapters = doc.css('a.ChapterCard_chapterWrapper__YjOzx').map do |ch|
       href = ch['href']
       chapter_id = href&.sub(%r{^/series/#{id}/}, '')
-
-      thumb_el = ch.at_css('.ChapterCard_chapterThumbnail__bik6B')
+      thumb_el = ch.at_css('.ChapterCard_chapterThumbnail__bik6B') || ch.at_css('.mantine-Image-root') || ch.at_css('img')
       thumb = extract_thumbnail(thumb_el)
+      img_url = normalize_image_url(thumb)
+
+      raw_date = ch.at_css('p[data-size="xs"]')&.[]('title')
+      time_obj = raw_date ? Time.parse(raw_date) : nil
+      date = TimeHelper.time_ago_in_words(time_obj)
 
       {
         chapter_id: chapter_id,
-        img_url: thumb,
+        img_url: img_url,
         label: ch.at_css('p[data-size="md"]')&.text&.strip || 'Unknown',
-        date: ch.at_css('p[data-size="xs"]')&.text&.strip || 'Unknown'
+        date: date
       }
     end
 
     {
-      title:,
+      title: title,
       alternative_titles: alt_titles,
-      poster_src:,
-      genres:,
+      poster_src: poster_src,
+      genres: genres,
       type: info['Type'] || 'Unknown',
-      status:,
+      status: status,
       author: info['Author'] || 'Unknown',
       artist: info['Artist'] || 'Unknown',
       serialization: info['Publisher'] || 'Unknown',
       release_year: info['Release Year'] || 'Unknown',
       language: info['Language'] || 'Unknown',
-      synopsis:,
+      synopsis: synopsis,
       chapters_length: chapters.size,
-      chapters:
+      chapters: chapters
     }
   rescue StandardError => e
     { error: "Error fetching details: #{e.message}" }
-  end
-
-  private_class_method def self.parse_image(src)
-    return 'Unknown' unless src
-
-    uri = begin
-      URI.parse(src)
-    rescue StandardError
-      nil
-    end
-    return src unless uri&.query
-
-    query = URI.decode_www_form(uri.query).to_h
-    query['url'] ? CGI.unescape(query['url']) : src
   end
 
   private_class_method def self.extract_thumbnail(thumb_el)

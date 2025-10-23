@@ -2,10 +2,14 @@ require 'httparty'
 require 'nokogiri'
 require 'cgi'
 require 'uri'
+require 'time'
 require_relative '../utils/variables'
+require_relative '../utils/image_helper'
+require_relative '../utils/time_helper'
 
 module Home
   extend self
+  include ImageHelper
 
   def fetch_data
     url = Variables::ORIGIN
@@ -32,11 +36,11 @@ module Home
       link = elem.at_css('a[href^="/series/"]')
       href = link&.[]('href')
       id = href&.split('/')&.last
-      img_url = parse_image(elem.at_css('img')&.[]('src'))
+      img_url = normalize_image_url(elem.at_css('img')&.[]('src'))
       genres = elem.css('.mantine-Badge-root a').map { |x| x.text.strip }.reject(&:empty?)
       next if title.empty? || id.nil? || img_url.nil? || genres.empty?
 
-      { id:, title:, img_url:, genres: }
+      { id: id, title: title, img_url: img_url, genres: genres }
     end
   end
 
@@ -51,15 +55,15 @@ module Home
       href = link['href']
       id = href&.split('/')&.last
       title = elem.at_css('p.mantine-Text-root')&.text&.strip
-      img_url = parse_image(elem.at_css('img')&.[]('src'))
+      img_url = normalize_image_url(elem.at_css('img')&.[]('src'))
       next unless id && title && img_url
 
       status = elem.at_css('.mantine-Badge-label')&.text&.strip
-      heart = elem.at_css('svg.bi-heart-fill')
-      heart_parent = heart&.parent
-      likes_text = heart_parent&.text&.strip
+      likes_el = elem.at_css('svg.bi-heart-fill')
+      likes_text = likes_el ? likes_el.parent&.text&.strip : nil
       likes = parse_likes(likes_text)
-      { id:, title:, img_url:, status:, likes: }
+
+      { id: id, title: title, img_url: img_url, status: status, likes: likes }
     end
   end
 
@@ -71,37 +75,47 @@ module Home
       title = title_a&.text&.strip
       next unless id && title
 
-      img_url = parse_image(elem.at_css('img')&.[]('src'))
+      img_url = normalize_image_url(elem.at_css('img')&.[]('src'))
+      next unless img_url
+
       chapters = elem.css("a[href*=\"/series/#{id}/\"]").filter_map do |link|
         ch_title = link.at_css('p')&.text&.strip
         ch_href = link['href']
         ch_id = ch_href&.split('/')&.last
-        ch_date = link.at_css('p.SeriesCard_date__wbLsz')&.text&.strip
+
+        # Try multiple ways to get date
+        raw_date = link.at_css('p.SeriesCard_date__wbLsz')&.[]('title') ||
+                   link.at_css('p[data-size="xs"]')&.[]('title') ||
+                   link.at_css('p.SeriesCard_date__wbLsz')&.text ||
+                   link.at_css('p[data-size="xs"]')&.text
+
+        ch_date = if raw_date
+                    begin
+                      # Try parsing absolute time first
+                      time_obj = Time.parse(raw_date)
+                      TimeHelper.time_ago_in_words(time_obj)
+                    rescue ArgumentError
+                      # Fallback to whatever text is available (e.g., "a day ago")
+                      raw_date.strip
+                    end
+                  else
+                    'Unknown'
+                  end
+
         next unless ch_title && ch_id && ch_date
 
         { chapter_id: ch_id, chapter_title: ch_title, chapter_date: ch_date }
       end
-      next if chapters.empty? || img_url.nil?
 
-      { id:, title:, img_url:, status: elem.at_css('.mantine-Badge-label')&.text&.strip, chapters: }
-    end
-  end
+      next if chapters.empty?
 
-  def parse_image(src)
-    return unless src
-
-    uri = begin
-      URI.parse(src)
-    rescue StandardError
-      nil
-    end
-    return unless uri
-
-    query = URI.decode_www_form(uri.query || '').to_h
-    if query['url']
-      CGI.unescape(query['url'])
-    else
-      src.start_with?('/') ? URI.join('https://cdn.flamecomics.xyz', src).to_s : src
+      {
+        id: id,
+        title: title,
+        img_url: img_url,
+        status: elem.at_css('.mantine-Badge-label')&.text&.strip,
+        chapters: chapters
+      }
     end
   end
 

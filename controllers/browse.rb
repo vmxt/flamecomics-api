@@ -3,6 +3,7 @@ require 'nokogiri'
 require 'cgi'
 require 'uri'
 require_relative '../utils/variables'
+require_relative '../utils/image_helper'
 
 class BrowseController
   def self.fetch_series(query_string = '')
