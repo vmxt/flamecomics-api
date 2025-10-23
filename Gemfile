@@ -1,5 +1,6 @@
 source 'https://rubygems.org'
 
+gem 'fastimage'
 gem 'httparty'
 gem 'nokogiri'
 gem 'puma'
