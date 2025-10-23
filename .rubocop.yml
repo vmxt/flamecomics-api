@@ -1,0 +1,68 @@
+# The behavior of RuboCop can be controlled via the .rubocop.yml
+# configuration file. It makes it possible to enable/disable
+# certain cops (checks) and to alter their behavior if they accept
+# any parameters. The file can be placed either in your home
+# directory or in some project directory.
+#
+# RuboCop will start looking for the configuration file in the directory
+# where the inspected file is and continue its way up to the root directory.
+#
+# See https://docs.rubocop.org/rubocop/configuration
+plugins:
+  - rubocop-performance
+  - rubocop-rspec
+  - rubocop-sequel
+
+AllCops:
+  NewCops: enable
+  TargetRubyVersion: 3.2
+  Exclude:
+    - 'bin/**/*'
+    - 'vendor/**/*'
+    - 'tmp/**/*'
+    - 'spec/**/*'
+    - 'test/**/*'
+    - 'config/**/*'
+
+Layout/LineLength:
+  Max: 120
+  
+Metrics/AbcSize:
+  Max: 100
+  Exclude:
+    - 'controllers/**/*'
+
+Metrics/MethodLength:
+  Max: 100
+  Exclude:
+    - 'controllers/**/*'
+
+Metrics/CyclomaticComplexity:
+  Max: 25
+  Exclude:
+    - 'controllers/**/*'
+
+Metrics/PerceivedComplexity:
+  Max: 25
+  Exclude:
+    - 'controllers/**/*'
+
+Metrics/BlockLength:
+  Exclude:
+    - 'controllers/**/*'
+    - 'router/**/*'
+
+Style/Documentation:
+  Enabled: false
+
+Style/FrozenStringLiteralComment:
+  Enabled: false
+
+Style/StringLiterals:
+  EnforcedStyle: single_quotes
+
+Style/HashSyntax:
+  EnforcedStyle: ruby19
+
+Lint/RescueException:
+  Enabled: true
