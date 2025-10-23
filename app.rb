@@ -10,7 +10,7 @@ class FlamecomicsAPI < Roda
   use Rack::Cors do |config|
     config.allow do |allow|
       allow.origins '*'
-      allow.resource '*', headers: :any, methods: [:get, :post, :put, :patch, :delete, :options, :head]
+      allow.resource '*', headers: :any, methods: %i[get post put patch delete options head]
     end
   end
 

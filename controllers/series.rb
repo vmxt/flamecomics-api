@@ -13,11 +13,19 @@ class SeriesController
 
     title = doc.at_css('h1.mantine-Title-root')&.text&.strip || 'Unknown'
     alt_titles = doc.at_css('.SeriesPage_altTitles__UI8Ij')&.text&.strip || 'Unknown'
-    status = doc.css('.mantine-Badge-root').find { |b| b.text.match?(/Ongoing|Dropped|Completed/i) }&.text&.strip || 'Unknown'
+    status = doc.css('.mantine-Badge-root').find do |b|
+      b.text.match?(/Ongoing|Dropped|Completed/i)
+    end&.text&.strip || 'Unknown'
     genres = doc.css('.SeriesPage_badge__ZSRhM span.mantine-Badge-label').map { |g| g.text.strip }
 
-    raw_synopsis = doc.css('div.SeriesPage_paper__mf3li p.mantine-Text-root').find { |p| p.inner_html.include?('&lt;p&gt;') }&.inner_html || ''
-    synopsis = Nokogiri::HTML.fragment(raw_synopsis.gsub('&lt;', '<').gsub('&gt;', '>')).text.strip rescue 'Unknown'
+    raw_synopsis = doc.css('div.SeriesPage_paper__mf3li p.mantine-Text-root').find do |p|
+      p.inner_html.include?('&lt;p&gt;')
+    end&.inner_html || ''
+    synopsis = begin
+      Nokogiri::HTML.fragment(raw_synopsis.gsub('&lt;', '<').gsub('&gt;', '>')).text.strip
+    rescue StandardError
+      'Unknown'
+    end
 
     info = doc.css('div.SeriesPage_paper__mf3li').each_with_object({}) do |div, h|
       key = div.at_css('p.SeriesPage_infoField__KolqF')&.text&.strip
@@ -31,14 +39,15 @@ class SeriesController
     chapters = doc.css('a.ChapterCard_chapterWrapper__YjOzx').map do |ch|
       href = ch['href']
       chapter_id = href&.sub(%r{^/series/#{id}/}, '')
-      thumb = ch.at_css('.ChapterCard_chapterThumbnail__bik6B img')&.[]('src') ||
-              ch.at_css('.ChapterCard_chapterThumbnail__bik6B')&.[]('style')&.match(/url\(['"]?(.*?)['"]?\)/)&.captures&.first
+
+      thumb_el = ch.at_css('.ChapterCard_chapterThumbnail__bik6B')
+      thumb = extract_thumbnail(thumb_el)
 
       {
         chapter_id: chapter_id,
         img_url: thumb,
         label: ch.at_css('p[data-size="md"]')&.text&.strip || 'Unknown',
-        date:  ch.at_css('p[data-size="xs"]')&.text&.strip || 'Unknown'
+        date: ch.at_css('p[data-size="xs"]')&.text&.strip || 'Unknown'
       }
     end
 
@@ -58,15 +67,34 @@ class SeriesController
       chapters_length: chapters.size,
       chapters:
     }
-  rescue => e
+  rescue StandardError => e
     { error: "Error fetching details: #{e.message}" }
   end
 
   private_class_method def self.parse_image(src)
     return 'Unknown' unless src
-    uri = URI.parse(src) rescue nil
+
+    uri = begin
+      URI.parse(src)
+    rescue StandardError
+      nil
+    end
     return src unless uri&.query
+
     query = URI.decode_www_form(uri.query).to_h
     query['url'] ? CGI.unescape(query['url']) : src
+  end
+
+  private_class_method def self.extract_thumbnail(thumb_el)
+    return unless thumb_el
+
+    img_src = thumb_el.at_css('img')&.[]('src')
+    return img_src if img_src
+
+    style = thumb_el['style']
+    return unless style
+
+    match = style.match(/url\(['"]?(.*?)['"]?\)/)
+    match&.captures&.first
   end
 end

@@ -1,3 +1,3 @@
 module Variables
-  ORIGIN = "https://flamecomics.xyz/"
+  ORIGIN = 'https://flamecomics.xyz/'.freeze
 end

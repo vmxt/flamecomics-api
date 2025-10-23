@@ -11,7 +11,7 @@ class SearchController
     results = data[:comics].select { |c| normalize(c[:title]).include?(query) }
 
     { count: results.size, results: results }
-  rescue => e
+  rescue StandardError => e
     { error: "Error performing search: #{e.message}" }
   end
 

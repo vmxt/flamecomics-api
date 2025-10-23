@@ -49,16 +49,15 @@ RSpec.describe 'FlamecomicsAPI Routes' do
 
   describe 'GET /browse' do
     it 'returns browse data' do
-      fake_data = { count: 1, comics: [{ title: "One Piece" }] }
+      fake_data = { count: 1, comics: [{ title: "Jungle Juice" }] }
       allow(BrowseController).to receive(:fetch_series).and_return(fake_data)
       get '/browse'
       expect(last_response.status).to eq(200)
       body = JSON.parse(last_response.body)
-      expect(body["comics"].first["title"]).to eq("One Piece")
+      expect(body["comics"].first["title"]).to eq("Jungle Juice")
     end
   end
 
-  # ✅ NEW TESTS FOR /search
   describe 'GET /search' do
     let(:mock_data) do
       {
@@ -91,7 +90,7 @@ RSpec.describe 'FlamecomicsAPI Routes' do
 
     it 'returns an error when title param is missing' do
       get '/search'
-      expect(last_response.status).to eq(400).or eq(200) # depends on your controller response
+      expect(last_response.status).to eq(400).or eq(200)
       body = JSON.parse(last_response.body)
       expect(body["error"]).to match(/Missing title parameter/)
     end

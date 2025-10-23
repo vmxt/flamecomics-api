@@ -5,7 +5,7 @@ require 'uri'
 require_relative '../utils/variables'
 
 class BrowseController
-  def self.fetch_series(query_string = "")
+  def self.fetch_series(query_string = '')
     url = "#{Variables::ORIGIN}/browse?#{query_string}"
     response = HTTParty.get(url)
     raise "Failed to fetch data: Status #{response.code}" unless response.code == 200
@@ -13,7 +13,7 @@ class BrowseController
     doc = Nokogiri::HTML(response.body)
 
     comics = doc.css('.mantine-Group-root').filter_map do |group|
-      img_el   = group.at_css('.DescSeriesCard_imageOuter__jCi_p img')
+      img_el = group.at_css('.DescSeriesCard_imageOuter__jCi_p img')
       stack_el = group.at_css('.mantine-Stack-root')
       next unless img_el && stack_el
 
@@ -22,9 +22,13 @@ class BrowseController
 
       id = link['href'][%r{/series/(\d+)/?}, 1]
       title = link.text.strip
-      rating = stack_el.at_css('.bi-heart-fill')&.parent&.next_element&.text&.strip&.to_i
+      heart_el = stack_el.at_css('.bi-heart-fill')
+      rating_el = heart_el&.parent&.next_element
+      rating_text = rating_el&.text
+      rating = rating_text ? rating_text.strip.to_i : nil
       status = stack_el.at_css('.mantine-Badge-label')&.text&.strip || 'Unknown'
-      genres = stack_el.css('.DescSeriesCard_categories__0736e .mantine-Badge-label').map { |g| g.text.strip }
+      genres = stack_el.css('.DescSeriesCard_categories__0736e .mantine-Badge-label')
+                       .map { |g| g.text.strip }
       description = stack_el.at_css('.DescSeriesCard_description__XNkvv p')&.text&.strip || 'No Description'
       img_url = extract_image_url(img_el)
 
@@ -40,7 +44,7 @@ class BrowseController
     end
 
     { count: comics.size, comics: comics }
-  rescue => e
+  rescue StandardError => e
     { error: "Error fetching data: #{e.message}" }
   end
 
@@ -48,9 +52,7 @@ class BrowseController
     src = img_el['src']
     srcset = img_el['srcset']
 
-    chosen = if src&.include?('/_next/image?')
-               src
-             elsif srcset
+    chosen = if srcset && !srcset.empty?
                srcset.split(',').first&.split&.first
              else
                src
@@ -61,8 +63,11 @@ class BrowseController
     begin
       uri = URI.parse(chosen)
       query = URI.decode_www_form(uri.query || '').to_h
-      query['url'] ? CGI.unescape(query['url']) :
-        (chosen.start_with?('/') ? URI.join('https://cdn.flamecomics.xyz', chosen).to_s : chosen)
+      if query['url']
+        CGI.unescape(query['url'])
+      else
+        chosen.start_with?('/') ? URI.join('https://cdn.flamecomics.xyz', chosen).to_s : chosen
+      end
     rescue URI::InvalidURIError
       chosen
     end

@@ -17,14 +17,16 @@ class ReadController
     img_srcs = doc.css('div.m_6d731127 img').filter_map do |img|
       style = img['style'] || ''
       next if style.include?('display:none')
+
       src = img['src'] || img['data-src']
       next unless src && !src.empty?
       next if src.include?('read_on_flame') || src.include?('commission')
+
       src
     end
 
     { series_id:, chapter_id:, title:, count: img_srcs.size, img_srcs: }
-  rescue => e
+  rescue StandardError => e
     { error: "Error fetching data: #{e.message}" }
   end
 end

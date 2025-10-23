@@ -20,11 +20,11 @@ class Routes < Roda
       { message: 'Flamecomics Manga scraper', apiStatus: true, serverStatus: 'ONLINE' }
     end
 
-    r.on "home" do
+    r.on 'home' do
       Home.fetch_data
     end
 
-    r.on "series" do
+    r.on 'series' do
       r.get String, String do |series_id, chapter_id|
         ReadController.fetch_read(series_id, chapter_id)
       end
@@ -34,13 +34,13 @@ class Routes < Roda
       end
     end
 
-    r.on "browse" do
+    r.on 'browse' do
       BrowseController.fetch_series(r.env['QUERY_STRING'])
     end
 
-    r.on "search" do
+    r.on 'search' do
       r.get do
-        SearchController.search_by_title(r.params["title"])
+        SearchController.search_by_title(r.params['title'])
       end
     end
   end
