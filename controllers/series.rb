@@ -22,7 +22,9 @@ class SeriesController
     status = doc.css('.mantine-Badge-root').find do |b|
       b.text.match?(/Ongoing|Dropped|Completed/i)
     end&.text&.strip || 'Unknown'
-    genres = doc.css('.SeriesPage_badge__ZSRhM span.mantine-Badge-label').map { |g| g.text.strip }
+
+    genres = doc.css('.SeriesPage_badge__ZSRhM span.mantine-Badge-label')
+                .map { |g| g.text.strip }
 
     raw_synopsis = doc.css('div.SeriesPage_paper__mf3li p.mantine-Text-root').find do |p|
       p.inner_html.include?('&lt;p&gt;')
@@ -47,7 +49,11 @@ class SeriesController
     chapters = doc.css('a.ChapterCard_chapterWrapper__YjOzx').map do |ch|
       href = ch['href']
       chapter_id = href&.sub(%r{^/series/#{id}/}, '')
-      thumb_el = ch.at_css('.ChapterCard_chapterThumbnail__bik6B') || ch.at_css('.mantine-Image-root') || ch.at_css('img')
+
+      thumb_el =
+        ch.at_css('.ChapterCard_chapterThumbnail__bik6B') ||
+        ch.at_css('.mantine-Image-root') ||
+        ch.at_css('img')
       thumb = extract_thumbnail(thumb_el)
       img_url = normalize_image_url(thumb)
 

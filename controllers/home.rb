@@ -83,7 +83,6 @@ module Home
         ch_href = link['href']
         ch_id = ch_href&.split('/')&.last
 
-        # Try multiple ways to get date
         raw_date = link.at_css('p.SeriesCard_date__wbLsz')&.[]('title') ||
                    link.at_css('p[data-size="xs"]')&.[]('title') ||
                    link.at_css('p.SeriesCard_date__wbLsz')&.text ||
@@ -91,11 +90,9 @@ module Home
 
         ch_date = if raw_date
                     begin
-                      # Try parsing absolute time first
                       time_obj = Time.parse(raw_date)
                       TimeHelper.time_ago_in_words(time_obj)
                     rescue ArgumentError
-                      # Fallback to whatever text is available (e.g., "a day ago")
                       raw_date.strip
                     end
                   else
