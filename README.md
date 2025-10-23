@@ -33,6 +33,12 @@ puma
 bundle exec rspec
 ```
 
+5. Development
+
+```
+bundle exec rubocop
+```
+
 ## Endpoints
 
 ### `/`
