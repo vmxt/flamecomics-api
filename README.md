@@ -192,6 +192,8 @@ GET /series/:id/:chapter_id
 {
   "series_id": "string",
   "chapter_id": "string",
+  "next_chapter_id": "string",
+  "prev_chapter_id": "string",
   "title": "string",
   "count": number,
   "img_srcs": ["string", "..."]
