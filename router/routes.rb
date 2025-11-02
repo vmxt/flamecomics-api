@@ -4,6 +4,7 @@ require_relative '../controllers/home'
 require_relative '../controllers/read'
 require_relative '../controllers/series'
 require_relative '../controllers/search'
+require_relative '../controllers/random'
 
 class Routes < Roda
   plugin :json
@@ -41,6 +42,15 @@ class Routes < Roda
     r.on 'search' do
       r.get do
         SearchController.search_by_title(r.params['title'])
+      end
+    end
+
+    r.on 'random' do
+      id = RandomController.find_valid_id
+      if id
+        r.redirect "/series/#{id}"
+      else
+        { error: 'No valid series found' }
       end
     end
   end
