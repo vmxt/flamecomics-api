@@ -22,9 +22,7 @@ class SeriesController
     status = doc.css('.mantine-Badge-root').find do |b|
       b.text.match?(/Ongoing|Dropped|Completed/i)
     end&.text&.strip || 'Unknown'
-
-    genres = doc.css('.SeriesPage_badge__ZSRhM span.mantine-Badge-label')
-                .map { |g| g.text.strip }
+    genres = doc.css('.SeriesPage_badge__ZSRhM span.mantine-Badge-label').map { |g| g.text.strip }
 
     raw_synopsis = doc.css('div.SeriesPage_paper__mf3li p.mantine-Text-root').find do |p|
       p.inner_html.include?('&lt;p&gt;')
@@ -35,10 +33,11 @@ class SeriesController
       'Unknown'
     end
 
-    info = doc.css('div.SeriesPage_paper__mf3li').each_with_object({}) do |div, h|
-      key = div.at_css('p.SeriesPage_infoField__KolqF')&.text&.strip
-      val = div.at_css('p.SeriesPage_infoValue__kbVfH')&.text&.strip
-      h[key] = val if key && val
+    info = {}
+    doc.css('div.ProductionInfoList_paper__VOSNN').each do |div|
+      key = div.at_css('p[class*="infoField"]')&.text&.strip
+      val = div.at_css('p[class*="infoValue"]')&.text&.strip
+      info[key] = val if key && val
     end
 
     img_src = doc.at_css('img.SeriesPage_cover__j6TrW')&.[]('src') ||
@@ -49,18 +48,12 @@ class SeriesController
     chapters = doc.css('a.ChapterCard_chapterWrapper__YjOzx').map do |ch|
       href = ch['href']
       chapter_id = href&.sub(%r{^/series/#{id}/}, '')
-
-      thumb_el =
-        ch.at_css('.ChapterCard_chapterThumbnail__bik6B') ||
-        ch.at_css('.mantine-Image-root') ||
-        ch.at_css('img')
+      thumb_el = ch.at_css('.ChapterCard_chapterThumbnail__bik6B, .mantine-Image-root, img')
       thumb = extract_thumbnail(thumb_el)
       img_url = normalize_image_url(thumb)
-
       raw_date = ch.at_css('p[data-size="xs"]')&.[]('title')
       time_obj = raw_date ? Time.parse(raw_date) : nil
       date = TimeHelper.time_ago_in_words(time_obj)
-
       {
         chapter_id: chapter_id,
         img_url: img_url,
@@ -96,9 +89,7 @@ class SeriesController
     return img_src if img_src
 
     style = thumb_el['style']
-    return unless style
-
-    match = style.match(/url\(['"]?(.*?)['"]?\)/)
+    match = style&.match(/url\(['"]?(.*?)['"]?\)/)
     match&.captures&.first
   end
 end
