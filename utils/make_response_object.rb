@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Utils
   class Response
     def self.make_response_object(data, status = 200)

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'roda'
 require_relative '../controllers/browse'
 require_relative '../controllers/home'
