@@ -262,6 +262,43 @@ GET /search?title=<search_term>
 }
 ```
 
+### `/random`
+
+Generates a random manga series redirect to /series/:id endpoint.
+
+```http
+GET /random
+```
+
+#### Response
+
+```json
+{
+  "title": "string",
+  "alternativeTitles": "string",
+  "posterSrc": "string",
+  "genres": ["string", "..."],
+  "type": "string",
+  "status": "string",
+  "author": "string",
+  "artist": "string",
+  "serialization": "string",
+  "releaseYear": "string",
+  "language": "string",
+  "synopsis": "string",
+  "chapters_length": number,
+  "chapters": [
+    {
+      "chapter_id": "string",
+      "img_url": "string",
+      "label": "string",
+      "date": "string"
+    },
+    ...
+  ]
+}
+```
+
 ## Error Responses
 
 The API may return error responses with the following structure:
