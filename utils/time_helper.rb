@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module TimeHelper
   def self.time_ago_in_words(from_time, to_time = Time.now)
     return 'Unknown' unless from_time

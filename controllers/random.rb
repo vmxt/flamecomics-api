@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'httparty'
 require 'nokogiri'
 require_relative '../utils/variables'
@@ -9,9 +11,9 @@ class RandomController
     return nil unless response.code == 200
 
     doc = Nokogiri::HTML(response.body)
-    ids = doc.css('a[href^="/series/"]').map do |link|
+    ids = doc.css('a[href^="/series/"]').filter_map do |link|
       link['href'].match(%r{/series/(\d+)})&.captures&.first
-    end.compact.uniq
+    end.uniq
 
     return nil if ids.empty?
 
