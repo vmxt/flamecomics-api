@@ -39,7 +39,7 @@ module Home
       href = link&.[]('href')
       id = href&.split('/')&.last
       img_url = normalize_image_url(elem.at_css('img')&.[]('src'))
-      genres = elem.css('.mantine-Badge-root a').map { |x| x.text.strip }.reject(&:empty?)
+      genres = elem.css('.mantine-Badge-root .mantine-Badge-label').map { |x| x.text.strip }.reject(&:empty?)
       next if title.empty? || id.nil? || img_url.nil? || genres.empty?
 
       { id: id, title: title, img_url: img_url, genres: genres }
