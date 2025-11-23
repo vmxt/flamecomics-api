@@ -20,38 +20,40 @@ class SeriesController
     doc = Nokogiri::HTML(response.body)
 
     title = doc.at_css('h1.mantine-Title-root')&.text&.strip || 'Unknown'
-    alt_titles = doc.at_css('.SeriesPage_altTitles__UI8Ij')&.text&.strip || 'Unknown'
+    alt_titles = doc.at_css('.SeriesPage_altTitles__OoTLD')&.text&.strip || 'Unknown'
     status = doc.css('.mantine-Badge-root').find do |b|
       b.text.match?(/Ongoing|Dropped|Completed/i)
     end&.text&.strip || 'Unknown'
-    genres = doc.css('.SeriesPage_badge__ZSRhM span.mantine-Badge-label').map { |g| g.text.strip }
+    genres = doc.css('.SeriesPage_badge__K0nlO span.mantine-Badge-label').map { |g| g.text.strip }
 
-    raw_synopsis = doc.css('div.SeriesPage_paper__mf3li p.mantine-Text-root').find do |p|
-      p.inner_html.include?('&lt;p&gt;')
-    end&.inner_html || ''
-    synopsis = begin
-      Nokogiri::HTML.fragment(raw_synopsis.gsub('&lt;', '<').gsub('&gt;', '>')).text.strip
-    rescue StandardError
-      'Unknown'
-    end
+    synopsis_node = doc.at_css('.mantine-focus-auto.SeriesPage_descriptionWrapper__Ta-fO.m_b6d8b162.mantine-Text-root')
+
+    synopsis = if synopsis_node
+                 raw_html = synopsis_node.inner_html.to_s
+                 decoded_html = CGI.unescapeHTML(raw_html)
+                 fragment = Nokogiri::HTML.fragment(decoded_html)
+                 fragment.text.strip
+               else
+                 'Unknown'
+               end
 
     info = {}
-    doc.css('div.ProductionInfoList_paper__VOSNN').each do |div|
+    doc.css('div.ProductionInfoList_paper__lHdlu').each do |div|
       key = div.at_css('p[class*="infoField"]')&.text&.strip
       val = div.at_css('p[class*="infoValue"]')&.text&.strip
       info[key] = val if key && val
     end
 
-    img_src = doc.at_css('img.SeriesPage_cover__j6TrW')&.[]('src') ||
-              doc.at_css('img[data-role="cover"]')&.[]('src') ||
-              doc.at_css('img.mantine-Image-image')&.[]('src')
+    img_src = doc.at_css('img.SeriesPage_cover__cEjW-')&.[]('src') ||
+              doc.at_css('img[data-nimg="1"]')&.[]('src') ||
+              doc.at_css('img[data-role="cover"]')&.[]('src')
     poster_src = normalize_image_url(img_src)
 
-    chapters = doc.css('a.ChapterCard_chapterWrapper__YjOzx').map do |ch|
+    chapters = doc.css('a.ChapterCard_chapterWrapper__NIPp5').map do |ch|
       href = ch['href']
       chapter_id = href&.sub(%r{^/series/#{id}/}, '')
-      thumb_el = ch.at_css('.ChapterCard_chapterThumbnail__bik6B, .mantine-Image-root, img')
-      thumb = extract_thumbnail(thumb_el)
+      thumb_el = ch.at_css('.ChapterCard_chapterThumbnail__oBFim img')
+      thumb = thumb_el&.[]('src')
       img_url = normalize_image_url(thumb)
       raw_date = ch.at_css('p[data-size="xs"]')&.[]('title')
       time_obj = raw_date ? Time.parse(raw_date) : nil
