@@ -16,7 +16,7 @@ class BrowseController
     doc = Nokogiri::HTML(response.body)
 
     comics = doc.css('.mantine-Group-root').filter_map do |group|
-      img_el = group.at_css('.DescSeriesCard_imageOuter__bKTXC img')
+      img_el = group.at_css('img')
       stack_el = group.at_css('.mantine-Stack-root')
       next unless img_el && stack_el
 
@@ -27,21 +27,22 @@ class BrowseController
       title = link_el.text.strip
 
       # Avoid long safe navigation chains
+      rating = 0
       heart_el = stack_el.at_css('svg.bi-heart-fill')
-      rating_el = nil
-      if heart_el
-        parent = heart_el.parent
-        rating_el = parent.next_element if parent
+      if heart_el&.parent&.next_element
+        rating_text = heart_el.parent.next_element.text
+        rating = rating_text.strip.to_i if rating_text
       end
-      rating = rating_el&.text&.strip&.to_i
 
       status_el = stack_el.at_css('.mantine-Badge-label')
-      status = status_el&.text&.strip || 'Unknown'
+      status = status_el ? status_el.text.strip : 'Unknown'
 
-      genres = stack_el.css('.DescSeriesCard_categories__adw1t .mantine-Badge-label')
-                       .map(&:text)
+      genres = stack_el.css('.DescSeriesCard_categories__adw1t .mantine-Badge-label').map(&:text)
 
-      description = stack_el.at_css('.DescSeriesCard_description__ZOp0z p')&.text&.strip || 'No Description'
+      description_el = stack_el.at_css('.DescSeriesCard_description__XNkvv p') ||
+                       stack_el.at_css('.DescSeriesCard_description__ZOp0z p')
+      description = description_el ? description_el.text.strip : 'No Description'
+
       img_url = extract_image_url(img_el)
 
       {
@@ -51,7 +52,7 @@ class BrowseController
         rating: rating,
         status: status,
         genres: genres,
-        sypnosis: description
+        synopsis: description
       }
     end
 
