@@ -33,17 +33,27 @@ module Home
   private
 
   def extract_spotlight(doc)
-    doc.css('.mantine-Carousel-slide').filter_map do |elem|
-      title = elem.css('h3.Carousel_infoTitle__9V64e, h2.Carousel_infoTitle__9V64e').text.strip
-      link = elem.at_css('a[href^="/series/"]')
+    slides = doc.css('div[data-orientation="horizontal"]').filter_map do |slide|
+      link = slide.at_css('a[href^="/series/"]')
       href = link&.[]('href')
       id = href&.split('/')&.last
-      img_url = normalize_image_url(elem.at_css('img')&.[]('src'))
-      genres = elem.css('.mantine-Badge-root .mantine-Badge-label').map { |x| x.text.strip }.reject(&:empty?)
-      next if title.empty? || id.nil? || img_url.nil? || genres.empty?
+      next unless link && id
+
+      title = slide.at_css('h2, h3')&.text&.strip
+      next if title.nil? || title.empty?
+
+      img_url = normalize_image_url(slide.at_css('img')&.[]('src'))
+      next unless img_url
+
+      genres = slide.css('a[href^="/genre/"] > div > span')
+                    .map { |x| x.text.strip }
+                    .reject(&:empty?)
+                    .uniq
 
       { id: id, title: title, img_url: img_url, genres: genres }
     end
+
+    slides.uniq { |s| s[:id] }
   end
 
   def extract_cards(doc, selector)
