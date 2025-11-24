@@ -16,23 +16,32 @@ class BrowseController
     doc = Nokogiri::HTML(response.body)
 
     comics = doc.css('.mantine-Group-root').filter_map do |group|
-      img_el = group.at_css('.DescSeriesCard_imageOuter__jCi_p img')
+      img_el = group.at_css('.DescSeriesCard_imageOuter__bKTXC img')
       stack_el = group.at_css('.mantine-Stack-root')
       next unless img_el && stack_el
 
-      link = stack_el.at_css('a[href^="/series/"]')
-      next unless link
+      link_el = stack_el.at_css('a[href^="/series/"]')
+      next unless link_el
 
-      id = link['href'][%r{/series/(\d+)/?}, 1]
-      title = link.text.strip
-      heart_el = stack_el.at_css('.bi-heart-fill')
-      rating_el = heart_el&.parent&.next_element
-      rating_text = rating_el&.text
-      rating = rating_text ? rating_text.strip.to_i : nil
-      status = stack_el.at_css('.mantine-Badge-label')&.text&.strip || 'Unknown'
-      genres = stack_el.css('.DescSeriesCard_categories__0736e .mantine-Badge-label')
-                       .map { |g| g.text.strip }
-      description = stack_el.at_css('.DescSeriesCard_description__XNkvv p')&.text&.strip || 'No Description'
+      id = link_el['href'][%r{/series/(\d+)/?}, 1]
+      title = link_el.text.strip
+
+      # Avoid long safe navigation chains
+      heart_el = stack_el.at_css('svg.bi-heart-fill')
+      rating_el = nil
+      if heart_el
+        parent = heart_el.parent
+        rating_el = parent.next_element if parent
+      end
+      rating = rating_el&.text&.strip&.to_i
+
+      status_el = stack_el.at_css('.mantine-Badge-label')
+      status = status_el&.text&.strip || 'Unknown'
+
+      genres = stack_el.css('.DescSeriesCard_categories__adw1t .mantine-Badge-label')
+                       .map(&:text)
+
+      description = stack_el.at_css('.DescSeriesCard_description__ZOp0z p')&.text&.strip || 'No Description'
       img_url = extract_image_url(img_el)
 
       {
