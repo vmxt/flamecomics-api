@@ -21,21 +21,23 @@ class SeriesController
 
     title = doc.at_css('h1.mantine-Title-root')&.text&.strip || 'Unknown'
     alt_titles = doc.at_css('.SeriesPage_altTitles__OoTLD')&.text&.strip || 'Unknown'
+
     status = doc.css('.mantine-Badge-root').find do |b|
       b.text.match?(/Ongoing|Dropped|Completed/i)
     end&.text&.strip || 'Unknown'
-    genres = doc.css('.SeriesPage_badge__K0nlO span.mantine-Badge-label').map { |g| g.text.strip }
 
-    synopsis_node = doc.at_css('.mantine-focus-auto.SeriesPage_descriptionWrapper__Ta-fO.m_b6d8b162.mantine-Text-root')
+    genres = doc.css('.SeriesPage_badge__K0nlO span.mantine-Badge-label')
+                .map { |g| g.text.strip }
 
-    synopsis = if synopsis_node
-                 raw_html = synopsis_node.inner_html.to_s
-                 decoded_html = CGI.unescapeHTML(raw_html)
-                 fragment = Nokogiri::HTML.fragment(decoded_html)
-                 fragment.text.strip
-               else
-                 'Unknown'
-               end
+    synopsis = doc.at_css('meta[name="description"]')&.[]('content') ||
+               doc.at_css('meta[property="og:description"]')&.[]('content') ||
+               'Unknown'
+
+    unless synopsis == 'Unknown'
+      synopsis = CGI.unescapeHTML(synopsis)
+                    .strip
+                    .gsub(/\s+/, ' ')
+    end
 
     info = {}
     doc.css('div.ProductionInfoList_paper__lHdlu').each do |div|
@@ -47,17 +49,21 @@ class SeriesController
     img_src = doc.at_css('img.SeriesPage_cover__cEjW-')&.[]('src') ||
               doc.at_css('img[data-nimg="1"]')&.[]('src') ||
               doc.at_css('img[data-role="cover"]')&.[]('src')
+
     poster_src = normalize_image_url(img_src)
 
     chapters = doc.css('a.ChapterCard_chapterWrapper__NIPp5').map do |ch|
       href = ch['href']
       chapter_id = href&.sub(%r{^/series/#{id}/}, '')
+
       thumb_el = ch.at_css('.ChapterCard_chapterThumbnail__oBFim img')
       thumb = thumb_el&.[]('src')
       img_url = normalize_image_url(thumb)
+
       raw_date = ch.at_css('p[data-size="xs"]')&.[]('title')
       time_obj = raw_date ? Time.parse(raw_date) : nil
       date = TimeHelper.time_ago_in_words(time_obj)
+
       {
         chapter_id: chapter_id,
         img_url: img_url,
