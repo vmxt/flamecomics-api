@@ -194,17 +194,161 @@ Chapter objects include normalized fields and legacy compatibility keys:
 
 Returns reader image URLs and navigation data for a chapter.
 
+Parameters:
+
+| Name | Required | Description |
+| --- | --- | --- |
+| `id` | Yes | Series id from `/home`, `/browse`, or `/series/:id`. |
+| `chapter_id` | Yes | Chapter token/id from a series chapter list or latest update. |
+
+Example:
+
+```http
+GET /series/133/6cfcfbd466cb823f
+```
+
+Response:
+
+```json
+{
+  "series_id": "133",
+  "chapter_id": "6cfcfbd466cb823f",
+  "next_chapter_id": "next-chapter-token",
+  "prev_chapter_id": "previous-chapter-token",
+  "title": "Series Title - Chapter 127",
+  "count": 12,
+  "img_srcs": [
+    "https://cdn.flamecomics.xyz/uploads/images/chapters/page-1.webp",
+    "https://cdn.flamecomics.xyz/uploads/images/chapters/page-2.webp"
+  ]
+}
+```
+
+Notes:
+
+- `next_chapter_id` and `prev_chapter_id` may be `null` at the newest or oldest chapter.
+- `count` is the number of image URLs returned in `img_srcs`.
+- Watermark/commission images are filtered out when detected.
+
 ### `GET /browse`
 
 Returns a list of series using FlameComics browse query parameters.
+
+Example:
+
+```http
+GET /browse
+GET /browse?page=2
+GET /browse?status=Ongoing&type=Manhwa
+```
+
+Response:
+
+```json
+{
+  "count": 1,
+  "comics": [
+    {
+      "id": "133",
+      "title": "The Regressed Youngest Son of the Duke is an Assassin",
+      "img_url": "https://cdn.flamecomics.xyz/uploads/images/series/133/thumbnail.png",
+      "rating": 489,
+      "status": "Ongoing",
+      "genres": ["Action", "Adventure", "Fantasy"],
+      "synopsis": "Series description text."
+    }
+  ]
+}
+```
+
+Notes:
+
+- Query parameters are passed through to FlameComics' browse page.
+- `rating` defaults to `0` when a rating cannot be found.
+- `synopsis` defaults to `"No Description"` when the card has no description.
+- This endpoint is cached for `180` seconds and returns `Cache-Control`.
 
 ### `GET /search?title=<search_term>`
 
 Searches browse results by title.
 
+Parameters:
+
+| Name | Required | Description |
+| --- | --- | --- |
+| `title` | Yes | Case-insensitive title text to search for. |
+
+Example:
+
+```http
+GET /search?title=frozen
+```
+
+Response:
+
+```json
+{
+  "count": 1,
+  "results": [
+    {
+      "id": "153",
+      "title": "Return of The Frozen Player",
+      "img_url": "https://cdn.flamecomics.xyz/uploads/images/series/153/thumbnail.jpeg",
+      "rating": 332,
+      "status": "Ongoing",
+      "genres": ["Action", "Adventure", "Fantasy"],
+      "synopsis": "Series description text."
+    }
+  ]
+}
+```
+
+Missing title response:
+
+```json
+{
+  "error": "Missing title parameter",
+  "code": "missing_title",
+  "source": "search"
+}
+```
+
+Notes:
+
+- Search normalizes punctuation, symbols, whitespace, and case.
+- Search currently uses browse results as its source.
+
 ### `GET /random`
 
 Redirects to a random valid `/series/:id` route.
+
+Example:
+
+```http
+GET /random
+```
+
+Success response:
+
+```http
+302 Found
+Location: /series/133
+```
+
+Failure response:
+
+```json
+{
+  "error": "No valid series found",
+  "code": "random_series_not_found",
+  "source": "random"
+}
+```
+
+Notes:
+
+- The endpoint samples series ids from the FlameComics browse page.
+- Clients should follow the redirect to receive the series details response.
 
 ## Error Responses
 
