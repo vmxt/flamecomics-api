@@ -1,14 +1,15 @@
 # frozen_string_literal: true
 
-require 'httparty'
 require 'nokogiri'
 require_relative '../utils/variables'
+require_relative '../utils/error_response'
+require_relative '../utils/http_client'
 require_relative 'series'
 
 class ReadController
   def self.fetch_read(series_id, chapter_id)
     url = "#{Variables::ORIGIN}/series/#{series_id}/#{chapter_id}"
-    response = HTTParty.get(url)
+    response = HttpClient.get(url)
     raise "Failed to fetch data: Status #{response.code}" unless response.code == 200
 
     doc = Nokogiri::HTML(response.body)
@@ -59,6 +60,6 @@ class ReadController
       img_srcs: img_srcs
     }
   rescue StandardError => e
-    { error: "Error fetching data: #{e.message}" }
+    ErrorResponse.build("Error fetching data: #{e.message}", code: 'chapter_fetch_failed', source: 'read')
   end
 end

@@ -1,318 +1,227 @@
-# Flamecomics Manga Scraper API Documentation
+# Flamecomics Manga Scraper API
 
-## Introduction
+Flamecomics API is a small Ruby/Roda scraper API for FlameComics series, chapters, home-page sections, and reader images.
 
-Welcome to the Flamecomics manga scraper API. This API allows you to retrieve information about manga series, chapters, and images from the website.
-
-The base port for this API is `9292`.
+The default local port is `9292`.
 
 ## Installation
 
-1. First clone this repository
-
-```
+```bash
 git clone https://github.com/vmxt/flamecomics-api.git
 cd flamecomics-api
-```
-
-2. Install dependencies
-
-```
 bundle install
 ```
 
-3. Run server
+## Development
 
-```
-puma
+Run the server:
+
+```bash
+bundle exec puma config.ru
 ```
 
-4. Test server
+If port `9292` is already in use:
 
+```bash
+bundle exec puma config.ru -p 9293
 ```
+
+Run tests and lint:
+
+```bash
 bundle exec rspec
-```
-
-5. Development
-
-```
 bundle exec rubocop
+```
+
+## Features
+
+- Scrapes FlameComics home, browse, series, and reader pages.
+- Reads latest update dates from embedded Next.js `__NEXT_DATA__`.
+- Adds short TTL response caching for expensive scraper endpoints.
+- Sends `Cache-Control` headers on cached responses.
+- Provides scraper and cache health endpoints.
+- Applies simple per-IP rate limiting.
+- Uses explicit outbound request timeouts with one retry.
+- Uses structured errors: `{ "error": "...", "code": "...", "source": "..." }`.
+- Supports versioned `/v1` aliases.
+- Exposes a static OpenAPI document at `/openapi.json`.
+
+## Versioning
+
+Current endpoints are available at both the root path and `/v1`.
+
+Examples:
+
+```http
+GET /home
+GET /v1/home
+GET /series/:id
+GET /v1/series/:id
+```
+
+## Caching
+
+These endpoints are cached in memory for `180` seconds:
+
+- `GET /home`
+- `GET /browse`
+- `GET /series/:id`
+
+Cached responses include:
+
+```http
+Cache-Control: public, max-age=180
+```
+
+Inspect cache state:
+
+```http
+GET /health/cache
+```
+
+Example:
+
+```json
+{
+  "cache": {
+    "count": 1,
+    "default_ttl_seconds": 180,
+    "keys": [
+      {
+        "key": "home",
+        "expires_in_seconds": 151
+      }
+    ]
+  },
+  "checked_at": "2026-05-19T00:00:00Z"
+}
+```
+
+## Rate Limiting
+
+The API allows `120` requests per IP per `60` seconds.
+
+Responses include:
+
+```http
+X-RateLimit-Limit: 120
+X-RateLimit-Remaining: 119
+X-RateLimit-Reset: 1779160000
+```
+
+When the limit is exceeded:
+
+```json
+{
+  "error": "Rate limit exceeded",
+  "code": "rate_limit_exceeded",
+  "source": "rate_limiter"
+}
 ```
 
 ## Endpoints
 
-### `/`
+### `GET /`
 
-Returns a JSON object containing a welcome message and API status.
+Returns the API index, feature list, cache metadata, and endpoint list.
 
-#### Request
+### `GET /openapi.json`
 
-```http
-GET /
-```
+Returns the static OpenAPI 3.0 document.
 
-#### Response
+### `GET /health/scrapers`
 
-```json
-{
-  "message": "Flamecomics Manga scraper",
-  "apiStatus": true,
-  "serverStatus": "ONLINE"
-}
-```
+Checks FlameComics reachability and whether the embedded Next.js latest update data is available.
 
-### `/home`
-
-Returns JSON data with spotlight, popular, and latest updates manga series.
-
-#### Request 
-
-```
-GET /home
-```
-
-#### Response
+Example response:
 
 ```json
 {
-  "spotlight": [
-    {
-      "id": "string",
-      "title": "string",
-      "img_url": "string",
-      "genre": ["string", "..."]
-    },
-    ...
-  ],
-  "popular": [
-    {
-      "id": "string",
-      "title": "string",
-      "img_url": "string",
-      "status": "string",
-      "likes": number
-    },
-    ...
-  "staff_picks": [
-    {
-      "id": "string",
-      "title": "string",
-      "img_url": "string",
-      "status": "string",
-      "likes": number
-    },
-    ...
-  ],
-  "latest_updates": [
-    {
-      "id": "string",
-      "title": "string",
-      "img_url": "string",
-      "status": "string",
-      "chapter": [
-        {
-          "chapter_id": "string",
-          "chapter_title": "string",
-          "chapter_date": "string"
-        },
-        ...
-      ]
-    },
-    ...
-  ]
+  "origin": "https://flamecomics.xyz/",
+  "reachable": true,
+  "status_code": 200,
+  "next_data_present": true,
+  "latest_entries_present": true,
+  "latest_updates_count": 18,
+  "latest_chapters_count": 54,
+  "sample_release_date_present": true,
+  "checked_at": "2026-05-19T00:00:00Z"
 }
 ```
 
-### `/series/:id`
+### `GET /health/cache`
 
-Returns details about a specific manga series by its ID.
+Returns in-memory cache statistics.
 
-#### Request
+### `GET /home`
 
-```http
-GET /series/:id
-```
+Returns spotlight, popular, staff picks, latest updates, and novels.
 
-#### Parameters
-
-| Parameter | Required | Description                                                                                         |
-| --------- | -------- | --------------------------------------------------------------------------------------------------- |
-| id        | Yes      | The ID of the manga series                                                                          |
-
-
-#### Response
+Latest updates are returned as flat chapter update rows:
 
 ```json
 {
-  "title": "string",
-  "alternativeTitles": "string",
-  "posterSrc": "string",
-  "genres": ["string", "..."],
-  "type": "string",
-  "status": "string",
-  "author": "string",
-  "artist": "string",
-  "serialization": "string",
-  "releaseYear": "string",
-  "language": "string",
-  "synopsis": "string",
-  "chapters_length": number,
-  "chapters": [
-    {
-      "chapter_id": "string",
-      "img_url": "string",
-      "label": "string",
-      "date": "string"
-    },
-    ...
-  ]
+  "id": "133",
+  "title": "The Regressed Youngest Son of the Duke is an Assassin",
+  "img_url": "https://cdn.flamecomics.xyz/uploads/images/series/133/thumbnail.png?1744391924",
+  "language": "KR",
+  "chapter_id": "6cfcfbd466cb823f",
+  "chapter_title": "Chapter 127 - The Princess’ Tour (1)",
+  "chapter_date": "3 hours ago"
 }
 ```
 
-### `/series/:id/:chapter_id`
+### `GET /series/:id`
 
-Returns image URLs and information for a specific manga chapter.
+Returns details about a series and its chapters.
 
-#### Request
-
-```http
-GET /series/:id/:chapter_id
-```
-
-#### Parameters
-
-| Parameter  | Required | Description                                        |
-| ---------  | -------- | -------------------------------------------------- |
-| id         | Yes      | The ID of the manga series                         |
-| chapter_id | Yes      | The ID of the chapter                              |
-
-#### Response
+Chapter objects include normalized fields and legacy compatibility keys:
 
 ```json
 {
-  "series_id": "string",
-  "chapter_id": "string",
-  "next_chapter_id": "string",
-  "prev_chapter_id": "string",
-  "title": "string",
-  "count": number,
-  "img_srcs": ["string", "..."]
+  "chapter_id": "chapter-token",
+  "chapter_number": "12",
+  "chapter_title": "The Test Title",
+  "chapter_label": "Chapter 12 - The Test Title",
+  "chapter_date": "3 hours ago",
+  "img_url": "https://example.com/chapter.jpg",
+  "label": "Chapter 12 - The Test Title",
+  "date": "3 hours ago"
 }
 ```
 
-### `/browse`
+### `GET /series/:id/:chapter_id`
 
-Returns a list of manga series filtered by query parameters.
+Returns reader image URLs and navigation data for a chapter.
 
-#### Request
+### `GET /browse`
 
-```http
-GET /browse
-```
+Returns a list of series using FlameComics browse query parameters.
 
-#### Response
+### `GET /search?title=<search_term>`
 
-```json
-{
-  "count": number,
-  "comics": [
-    {
-      "id": "string",
-      "title": "string",
-      "img_url": "string",
-      "rating": number|null,
-      "status": "string",
-      "genres": ["string", "..."],
-      "sypnosis": "string"
-    },
-    ...
-  ]
-}
-```
+Searches browse results by title.
 
-### `/search`
+### `GET /random`
 
-Search manga series by title.
-
-```http
-GET /search?title=<search_term>
-```
-
-| Parameter  | Required | Description                                        |
-| ---------  | -------- | -------------------------------------------------- |
-| title      | Yes      | Part or full title to retrieve series              |
-
-#### Response
-
-```json
-{
-  "count": number,
-  "results": [
-    {
-      "id": "string",
-      "title": "string",
-      "img_url": "string",
-      "rating": number|null,
-      "status": "string",
-      "genres": ["string", "..."],
-      "sypnosis": "string"
-    },
-    ...
-  ]
-}
-```
-
-### `/random`
-
-Generates a random manga series redirect to /series/:id endpoint.
-
-```http
-GET /random
-```
-
-#### Response
-
-```json
-{
-  "title": "string",
-  "alternativeTitles": "string",
-  "posterSrc": "string",
-  "genres": ["string", "..."],
-  "type": "string",
-  "status": "string",
-  "author": "string",
-  "artist": "string",
-  "serialization": "string",
-  "releaseYear": "string",
-  "language": "string",
-  "synopsis": "string",
-  "chapters_length": number,
-  "chapters": [
-    {
-      "chapter_id": "string",
-      "img_url": "string",
-      "label": "string",
-      "date": "string"
-    },
-    ...
-  ]
-}
-```
+Redirects to a random valid `/series/:id` route.
 
 ## Error Responses
 
-The API may return error responses with the following structure:
+Errors use a structured shape:
 
 ```json
 {
-  "error": "Error message"
+  "error": "Missing title parameter",
+  "code": "missing_title",
+  "source": "search"
 }
 ```
 
-The `error` field contains the error message. The HTTP status code of the response will indicate the type of error.
+Common status codes:
 
-The API may return the following status codes:
-
-- `400 Bad Request` - Invalid or missing parameters
-- `404 Not Found` - Invalid endpoint or resource not found
-- `500 Internal Server Error` - Server error or unexpected exception occurred.
+- `200 OK` - Successful JSON response.
+- `302 Found` - Random series redirect.
+- `404 Not Found` - Invalid route.
+- `429 Too Many Requests` - Rate limit exceeded.
+- `500 Internal Server Error` - Unexpected server error.

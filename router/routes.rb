@@ -7,6 +7,11 @@ require_relative '../controllers/read'
 require_relative '../controllers/series'
 require_relative '../controllers/search'
 require_relative '../controllers/random'
+require_relative '../controllers/health'
+require_relative '../controllers/index'
+require_relative '../controllers/openapi'
+require_relative '../utils/error_response'
+require_relative '../utils/response_cache'
 
 class Routes < Roda
   plugin :json
@@ -15,45 +20,75 @@ class Routes < Roda
 
   error do |e|
     response.status = 500
-    { error: e.message }
+    ErrorResponse.build(e.message, code: 'internal_server_error', source: 'routes')
   end
 
-  route do |r|
-    r.root do
-      { message: 'Flamecomics Manga scraper', apiStatus: true, serverStatus: 'ONLINE' }
+  route do |routing|
+    routing.root do
+      IndexController.fetch
     end
 
-    r.on 'home' do
-      Home.fetch_data
+    routing.get 'openapi.json' do
+      OpenAPIController.fetch
     end
 
-    r.on 'series' do
-      r.get String, String do |series_id, chapter_id|
+    routing.on 'v1' do
+      route_api(routing)
+    end
+
+    route_api(routing)
+  end
+
+  private
+
+  def route_api(routing)
+    routing.on 'home' do
+      cached('home') { Home.fetch_data }
+    end
+
+    routing.on 'health' do
+      routing.get 'scrapers' do
+        HealthController.scrapers
+      end
+
+      routing.get 'cache' do
+        HealthController.cache
+      end
+    end
+
+    routing.on 'series' do
+      routing.get String, String do |series_id, chapter_id|
         ReadController.fetch_read(series_id, chapter_id)
       end
 
-      r.get String do |id|
-        SeriesController.fetch_details(id)
+      routing.get String do |id|
+        cached("series:#{id}") { SeriesController.fetch_details(id) }
       end
     end
 
-    r.on 'browse' do
-      BrowseController.fetch_series(r.env['QUERY_STRING'])
+    routing.on 'browse' do
+      query_string = routing.env['QUERY_STRING']
+      cached("browse:#{query_string}") { BrowseController.fetch_series(query_string) }
     end
 
-    r.on 'search' do
-      r.get do
-        SearchController.search_by_title(r.params['title'])
+    routing.on 'search' do
+      routing.get do
+        SearchController.search_by_title(routing.params['title'])
       end
     end
 
-    r.on 'random' do
+    routing.on 'random' do
       id = RandomController.find_valid_id
       if id
-        r.redirect "/series/#{id}"
+        routing.redirect "/series/#{id}"
       else
-        { error: 'No valid series found' }
+        ErrorResponse.build('No valid series found', code: 'random_series_not_found', source: 'random')
       end
     end
+  end
+
+  def cached(key, &)
+    response['Cache-Control'] = "public, max-age=#{ResponseCache::DEFAULT_TTL}"
+    ResponseCache.fetch(key, &)
   end
 end

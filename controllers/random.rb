@@ -1,13 +1,13 @@
 # frozen_string_literal: true
 
-require 'httparty'
 require 'nokogiri'
 require_relative '../utils/variables'
+require_relative '../utils/http_client'
 
 class RandomController
   def self.find_valid_id
     url = "#{Variables::ORIGIN}/browse"
-    response = HTTParty.get(url)
+    response = HttpClient.get(url)
     return nil unless response.code == 200
 
     doc = Nokogiri::HTML(response.body)

@@ -1,10 +1,13 @@
 # frozen_string_literal: true
 
 require_relative '../controllers/browse'
+require_relative '../utils/error_response'
 
 class SearchController
   def self.search_by_title(title)
-    return { error: 'Missing title parameter' } if title.nil? || title.strip.empty?
+    if title.nil? || title.strip.empty?
+      return ErrorResponse.build('Missing title parameter', code: 'missing_title', source: 'search')
+    end
 
     data = BrowseController.fetch_series
     return data if data[:error]
@@ -14,7 +17,7 @@ class SearchController
 
     { count: results.size, results: results }
   rescue StandardError => e
-    { error: "Error performing search: #{e.message}" }
+    ErrorResponse.build("Error performing search: #{e.message}", code: 'search_failed', source: 'search')
   end
 
   private_class_method def self.normalize(text)

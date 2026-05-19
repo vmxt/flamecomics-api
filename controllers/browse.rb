@@ -1,16 +1,17 @@
 # frozen_string_literal: true
 
-require 'httparty'
 require 'nokogiri'
 require 'cgi'
 require 'uri'
 require_relative '../utils/variables'
 require_relative '../utils/image_helper'
+require_relative '../utils/error_response'
+require_relative '../utils/http_client'
 
 class BrowseController
   def self.fetch_series(query_string = '')
     url = "#{Variables::ORIGIN}/browse?#{query_string}"
-    response = HTTParty.get(url)
+    response = HttpClient.get(url)
     raise "Failed to fetch data: Status #{response.code}" unless response.code == 200
 
     doc = Nokogiri::HTML(response.body)
@@ -58,7 +59,7 @@ class BrowseController
 
     { count: comics.size, comics: comics }
   rescue StandardError => e
-    { error: "Error fetching data: #{e.message}" }
+    ErrorResponse.build("Error fetching data: #{e.message}", code: 'browse_fetch_failed', source: 'browse')
   end
 
   private_class_method def self.extract_image_url(img_el)

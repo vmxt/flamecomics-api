@@ -12,9 +12,20 @@
 
 require 'rack/test'
 require 'rspec'
+require 'vcr'
+require 'webmock/rspec'
 require_relative '../app'
+require_relative '../utils/response_cache'
 
 ENV['RACK_ENV'] = 'test'
+
+WebMock.disable_net_connect!(allow_localhost: true)
+
+VCR.configure do |config|
+  config.cassette_library_dir = 'spec/cassettes'
+  config.hook_into :webmock
+  config.configure_rspec_metadata!
+end
 
 RSpec.configure do |config|
   include Rack::Test::Methods
@@ -58,4 +69,8 @@ RSpec.configure do |config|
   config.filter_run_when_matching :focus
 
   config.profile_examples = 5
+
+  config.after do
+    ResponseCache.clear
+  end
 end

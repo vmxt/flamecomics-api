@@ -10,11 +10,17 @@ RSpec.describe 'FlamecomicsAPI Routes' do
   end
 
   describe 'GET /' do
-    it 'returns a welcome message' do
+    it 'returns the API index' do
       get '/'
       expect(last_response.status).to eq(200)
       body = JSON.parse(last_response.body)
       expect(body["message"]).to match(/Flamecomics Manga scraper/)
+      expect(body["features"]).to include("Scraper health diagnostics", "Short TTL response caching")
+      expect(body["cache"]).to include("ttl_seconds" => 180)
+      expect(body["endpoints"]).to include(
+        include("method" => "GET", "path" => "/health/scrapers"),
+        include("method" => "GET", "path" => "/home")
+      )
     end
   end
 
@@ -24,6 +30,60 @@ RSpec.describe 'FlamecomicsAPI Routes' do
       get '/home'
       expect(last_response.status).to eq(200)
       expect(JSON.parse(last_response.body)).to include("spotlight", "popular", "latest_updates")
+      expect(last_response.headers["Cache-Control"]).to eq("public, max-age=180")
+    end
+
+    it 'caches home data briefly' do
+      allow(Home).to receive(:fetch_data).once.and_return({ "spotlight" => [], "popular" => [], "latest_updates" => [] })
+
+      get '/home'
+      get '/home'
+
+      expect(last_response.status).to eq(200)
+    end
+  end
+
+  describe 'GET /health/scrapers' do
+    it 'returns scraper health data' do
+      fake_data = { reachable: true, next_data_present: true }
+      allow(HealthController).to receive(:scrapers).and_return(fake_data)
+
+      get '/health/scrapers'
+
+      expect(last_response.status).to eq(200)
+      expect(JSON.parse(last_response.body)).to include("reachable" => true, "next_data_present" => true)
+    end
+  end
+
+  describe 'GET /health/cache' do
+    it 'returns cache stats' do
+      get '/health/cache'
+
+      expect(last_response.status).to eq(200)
+      expect(JSON.parse(last_response.body)).to include("cache")
+    end
+  end
+
+  describe 'GET /openapi.json' do
+    it 'returns OpenAPI data' do
+      get '/openapi.json'
+
+      expect(last_response.status).to eq(200)
+      body = JSON.parse(last_response.body)
+      expect(body["openapi"]).to eq("3.0.3")
+      expect(body["paths"]).to include("/v1/home", "/health/cache")
+    end
+  end
+
+  describe 'GET /v1/home' do
+    it 'returns versioned home data' do
+      allow(Home).to receive(:fetch_data).and_return({ "spotlight" => [], "popular" => [], "latest_updates" => [] })
+
+      get '/v1/home'
+
+      expect(last_response.status).to eq(200)
+      expect(JSON.parse(last_response.body)).to include("spotlight", "popular", "latest_updates")
+      expect(last_response.headers["Cache-Control"]).to eq("public, max-age=180")
     end
   end
 
@@ -32,6 +92,16 @@ RSpec.describe 'FlamecomicsAPI Routes' do
       fake_data = { title: "Mock Series" }
       allow(SeriesController).to receive(:fetch_details).with("123").and_return(fake_data)
       get '/series/123'
+      expect(last_response.status).to eq(200)
+      expect(JSON.parse(last_response.body)["title"]).to eq("Mock Series")
+    end
+
+    it 'caches series details by id' do
+      allow(SeriesController).to receive(:fetch_details).with("123").once.and_return({ title: "Mock Series" })
+
+      get '/series/123'
+      get '/series/123'
+
       expect(last_response.status).to eq(200)
       expect(JSON.parse(last_response.body)["title"]).to eq("Mock Series")
     end
@@ -55,6 +125,17 @@ RSpec.describe 'FlamecomicsAPI Routes' do
       expect(last_response.status).to eq(200)
       body = JSON.parse(last_response.body)
       expect(body["comics"].first["title"]).to eq("Jungle Juice")
+    end
+
+    it 'caches browse data by query string' do
+      fake_data = { count: 1, comics: [{ title: "Jungle Juice" }] }
+      allow(BrowseController).to receive(:fetch_series).with("page=1").once.and_return(fake_data)
+
+      get '/browse?page=1'
+      get '/browse?page=1'
+
+      expect(last_response.status).to eq(200)
+      expect(JSON.parse(last_response.body)["count"]).to eq(1)
     end
   end
 

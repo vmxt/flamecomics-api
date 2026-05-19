@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require 'httparty'
 require 'nokogiri'
 require 'uri'
 require 'cgi'
@@ -8,13 +7,17 @@ require 'time'
 require_relative '../utils/variables'
 require_relative '../utils/image_helper'
 require_relative '../utils/time_helper'
+require_relative '../utils/chapter_label_formatter'
+require_relative '../utils/error_response'
+require_relative '../utils/http_client'
 
 class SeriesController
   extend ImageHelper
+  extend ChapterLabelFormatter
 
   def self.fetch_details(id)
     url = "#{Variables::ORIGIN}/series/#{id}"
-    response = HTTParty.get(url)
+    response = HttpClient.get(url)
     raise "Failed to fetch details: Status #{response.code}" unless response.code == 200
 
     doc = Nokogiri::HTML(response.body)
@@ -52,24 +55,8 @@ class SeriesController
 
     poster_src = normalize_image_url(img_src)
 
-    chapters = doc.css('a.ChapterCard_chapterWrapper__NIPp5').map do |ch|
-      href = ch['href']
-      chapter_id = href&.sub(%r{^/series/#{id}/}, '')
-
-      thumb_el = ch.at_css('.ChapterCard_chapterThumbnail__oBFim img')
-      thumb = thumb_el&.[]('src')
-      img_url = normalize_image_url(thumb)
-
-      raw_date = ch.at_css('p[data-size="xs"]')&.[]('title')
-      time_obj = raw_date ? Time.parse(raw_date) : nil
-      date = TimeHelper.time_ago_in_words(time_obj)
-
-      {
-        chapter_id: chapter_id,
-        img_url: img_url,
-        label: ch.at_css('p[data-size="md"]')&.text&.strip || 'Unknown',
-        date: date
-      }
+    chapters = doc.css('a.ChapterCard_chapterWrapper__NIPp5').map do |chapter|
+      normalized_chapter(chapter, id)
     end
 
     {
@@ -89,7 +76,7 @@ class SeriesController
       chapters: chapters
     }
   rescue StandardError => e
-    { error: "Error fetching details: #{e.message}" }
+    ErrorResponse.build("Error fetching details: #{e.message}", code: 'series_fetch_failed', source: 'series')
   end
 
   private_class_method def self.extract_thumbnail(thumb_el)
@@ -101,5 +88,28 @@ class SeriesController
     style = thumb_el['style']
     match = style&.match(/url\(['"]?(.*?)['"]?\)/)
     match&.captures&.first
+  end
+
+  private_class_method def self.normalized_chapter(chapter, series_id)
+    label = chapter.at_css('p[data-size="md"]')&.text&.strip || 'Unknown'
+    date = chapter_date(chapter)
+
+    {
+      chapter_id: chapter['href']&.sub(%r{^/series/#{series_id}/}, ''),
+      chapter_number: chapter_number_from_label(label),
+      chapter_title: chapter_title_from_label(label),
+      chapter_label: label,
+      chapter_date: date,
+      img_url: normalize_image_url(chapter.at_css('.ChapterCard_chapterThumbnail__oBFim img')&.[]('src')),
+      label: label,
+      date: date
+    }
+  end
+
+  private_class_method def self.chapter_date(chapter)
+    raw_date = chapter.at_css('p[data-size="xs"]')&.[]('title')
+    time_obj = raw_date ? Time.parse(raw_date) : nil
+
+    TimeHelper.time_ago_in_words(time_obj)
   end
 end
