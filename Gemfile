@@ -1,11 +1,13 @@
 source 'https://rubygems.org'
 
+gem 'connection_pool'
 gem 'fastimage'
 gem 'httparty'
 gem 'nokogiri'
 gem 'puma'
 gem 'rack-cors'
 gem 'rackup'
+gem 'redis'
 gem 'roda'
 
 group :development, :test do

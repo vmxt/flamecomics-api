@@ -62,6 +62,27 @@ RSpec.describe 'FlamecomicsAPI Routes' do
       expect(last_response.status).to eq(200)
       expect(JSON.parse(last_response.body)).to include("cache")
     end
+
+    it 'clears cache entries' do
+      allow(Home).to receive(:fetch_data).and_return({ "spotlight" => [] })
+      get '/home'
+
+      delete '/health/cache'
+
+      expect(last_response.status).to eq(200)
+      body = JSON.parse(last_response.body)
+      expect(body.dig("cache", "cleared")).to be >= 1
+      expect(body.dig("cache", "current", "count")).to eq(0)
+    end
+  end
+
+  describe 'GET /health/metrics' do
+    it 'returns observability metrics' do
+      get '/health/metrics'
+
+      expect(last_response.status).to eq(200)
+      expect(JSON.parse(last_response.body)).to include("metrics")
+    end
   end
 
   describe 'GET /openapi.json' do
@@ -72,6 +93,11 @@ RSpec.describe 'FlamecomicsAPI Routes' do
       body = JSON.parse(last_response.body)
       expect(body["openapi"]).to eq("3.0.3")
       expect(body["paths"]).to include("/v1/home", "/health/cache")
+      expect(body.dig("components", "schemas")).to include("Home", "Browse", "Series", "Reader", "Error")
+      expect(body.dig("paths", "/search", "get", "parameters")).to include(
+        include("name" => "limit"),
+        include("name" => "genre")
+      )
     end
   end
 

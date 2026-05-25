@@ -7,6 +7,7 @@ require_relative '../utils/variables'
 require_relative '../utils/error_response'
 require_relative '../utils/http_client'
 require_relative '../utils/response_cache'
+require_relative '../utils/observability'
 
 class HealthController
   def self.scrapers
@@ -37,6 +38,23 @@ class HealthController
   def self.cache
     {
       cache: ResponseCache.stats,
+      checked_at: Time.now.utc.iso8601
+    }
+  end
+
+  def self.clear_cache
+    {
+      cache: {
+        cleared: ResponseCache.clear,
+        current: ResponseCache.stats
+      },
+      checked_at: Time.now.utc.iso8601
+    }
+  end
+
+  def self.metrics
+    {
+      metrics: Observability.snapshot,
       checked_at: Time.now.utc.iso8601
     }
   end

@@ -39,12 +39,15 @@ bundle exec rubocop
 - Reads latest update dates from embedded Next.js `__NEXT_DATA__`.
 - Adds short TTL response caching for expensive scraper endpoints.
 - Sends `Cache-Control` headers on cached responses.
-- Provides scraper and cache health endpoints.
+- Provides scraper, cache, and metrics health endpoints.
+- Can clear stale cache data without restarting the app.
+- Supports optional Redis-backed shared cache via `REDIS_URL`.
 - Applies simple per-IP rate limiting.
+- Logs requests and tracks cache/upstream timing counters.
 - Uses explicit outbound request timeouts with one retry.
 - Uses structured errors: `{ "error": "...", "code": "...", "source": "..." }`.
 - Supports versioned `/v1` aliases.
-- Exposes a static OpenAPI document at `/openapi.json`.
+- Exposes a static OpenAPI document with endpoint parameters and response schemas at `/openapi.json`.
 
 ## Versioning
 
@@ -61,11 +64,17 @@ GET /v1/series/:id
 
 ## Caching
 
-These endpoints are cached in memory for `180` seconds:
+These endpoints are cached for `180` seconds:
 
 - `GET /home`
 - `GET /browse`
 - `GET /series/:id`
+
+By default, caching uses process memory. Set `REDIS_URL` to use Redis as a shared cache backend across app processes:
+
+```bash
+REDIS_URL=redis://localhost:6379/0 bundle exec puma config.ru
+```
 
 Cached responses include:
 
@@ -84,6 +93,7 @@ Example:
 ```json
 {
   "cache": {
+    "backend": "memory",
     "count": 1,
     "default_ttl_seconds": 180,
     "keys": [
@@ -95,6 +105,18 @@ Example:
   },
   "checked_at": "2026-05-19T00:00:00Z"
 }
+```
+
+Clear cached responses:
+
+```http
+DELETE /health/cache
+```
+
+Inspect request, cache, and upstream timing counters:
+
+```http
+GET /health/metrics
 ```
 
 ## Rate Limiting
@@ -127,7 +149,7 @@ Returns the API index, feature list, cache metadata, and endpoint list.
 
 ### `GET /openapi.json`
 
-Returns the static OpenAPI 3.0 document.
+Returns the static OpenAPI 3.0 document, including schemas for home, browse, series, reader, search, health, metrics, cache, and structured errors.
 
 ### `GET /health/scrapers`
 
@@ -151,7 +173,15 @@ Example response:
 
 ### `GET /health/cache`
 
-Returns in-memory cache statistics.
+Returns cache statistics for the active backend.
+
+### `DELETE /health/cache`
+
+Clears cached scraper responses.
+
+### `GET /health/metrics`
+
+Returns request, cache, and upstream HTTP counters plus timing summaries.
 
 ### `GET /home`
 
@@ -180,12 +210,8 @@ Chapter objects include normalized fields and legacy compatibility keys:
 ```json
 {
   "chapter_id": "chapter-token",
-  "chapter_number": "12",
-  "chapter_title": "The Test Title",
   "chapter_label": "Chapter 12 - The Test Title",
-  "chapter_date": "3 hours ago",
   "img_url": "https://example.com/chapter.jpg",
-  "label": "Chapter 12 - The Test Title",
   "date": "3 hours ago"
 }
 ```
@@ -257,7 +283,14 @@ Response:
       "genres": ["Action", "Adventure", "Fantasy"],
       "synopsis": "Series description text."
     }
-  ]
+  ],
+  "pagination": {
+    "page": 2,
+    "next_page": 3,
+    "prev_page": 1,
+    "has_next_page": true,
+    "total_pages": 8
+  }
 }
 ```
 
@@ -277,6 +310,10 @@ Parameters:
 | Name | Required | Description |
 | --- | --- | --- |
 | `title` | Yes | Case-insensitive title text to search for. |
+| `limit` | No | Maximum results per page. Defaults to `20`, max `100`. |
+| `page` | No | Search results page. Defaults to `1`. |
+| `status` | No | Passed through to FlameComics browse filtering. |
+| `genre` | No | Passed through to FlameComics browse filtering. |
 
 Example:
 
@@ -289,6 +326,7 @@ Response:
 ```json
 {
   "count": 1,
+  "total_count": 1,
   "results": [
     {
       "id": "153",
@@ -299,7 +337,18 @@ Response:
       "genres": ["Action", "Adventure", "Fantasy"],
       "synopsis": "Series description text."
     }
-  ]
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "next_page": null,
+    "prev_page": null,
+    "has_next_page": false
+  },
+  "filters": {
+    "status": "Ongoing",
+    "genre": "Action"
+  }
 }
 ```
 
@@ -315,7 +364,7 @@ Missing title response:
 
 Notes:
 
-- Search normalizes punctuation, symbols, whitespace, and case.
+- Search normalizes punctuation, symbols, whitespace, and case, then falls back to fuzzy title matching for close typos.
 - Search currently uses browse results as its source.
 
 ### `GET /random`

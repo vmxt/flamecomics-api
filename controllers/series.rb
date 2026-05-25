@@ -91,17 +91,13 @@ class SeriesController
   end
 
   private_class_method def self.normalized_chapter(chapter, series_id)
-    label = chapter.at_css('p[data-size="md"]')&.text&.strip || 'Unknown'
+    chapter_label = chapter.at_css('p[data-size="md"]')&.text&.strip || 'Unknown'
     date = chapter_date(chapter)
 
     {
       chapter_id: chapter['href']&.sub(%r{^/series/#{series_id}/}, ''),
-      chapter_number: chapter_number_from_label(label),
-      chapter_title: chapter_title_from_label(label),
-      chapter_label: label,
-      chapter_date: date,
+      chapter_label: chapter_label,
       img_url: normalize_image_url(chapter.at_css('.ChapterCard_chapterThumbnail__oBFim img')&.[]('src')),
-      label: label,
       date: date
     }
   end

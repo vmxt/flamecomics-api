@@ -10,6 +10,7 @@ require_relative '../utils/http_client'
 
 class BrowseController
   def self.fetch_series(query_string = '')
+    params = parse_query(query_string)
     url = "#{Variables::ORIGIN}/browse?#{query_string}"
     response = HttpClient.get(url)
     raise "Failed to fetch data: Status #{response.code}" unless response.code == 200
@@ -57,9 +58,42 @@ class BrowseController
       }
     end
 
-    { count: comics.size, comics: comics }
+    { count: comics.size, comics: comics, pagination: pagination(doc, params) }
   rescue StandardError => e
     ErrorResponse.build("Error fetching data: #{e.message}", code: 'browse_fetch_failed', source: 'browse')
+  end
+
+  private_class_method def self.parse_query(query_string)
+    URI.decode_www_form(query_string.to_s).each_with_object({}) do |(key, value), params|
+      params[key] = value
+    end
+  rescue ArgumentError
+    {}
+  end
+
+  private_class_method def self.pagination(doc, params)
+    page = positive_integer(params['page']) || 1
+    page_numbers = doc.css('a[href*="page="]').filter_map do |link|
+      href = link['href'].to_s
+      positive_integer(URI.decode_www_form(URI.parse(href).query.to_s).assoc('page')&.last)
+    rescue URI::InvalidURIError, ArgumentError
+      nil
+    end
+    max_linked_page = page_numbers.max
+    has_next_page = page_numbers.any? { |linked_page| linked_page > page }
+
+    {
+      page: page,
+      next_page: has_next_page ? page + 1 : nil,
+      prev_page: page > 1 ? page - 1 : nil,
+      has_next_page: has_next_page,
+      total_pages: max_linked_page && [max_linked_page, page].max
+    }
+  end
+
+  private_class_method def self.positive_integer(value)
+    integer = value.to_i
+    integer.positive? ? integer : nil
   end
 
   private_class_method def self.extract_image_url(img_el)

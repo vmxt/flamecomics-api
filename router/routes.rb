@@ -54,6 +54,14 @@ class Routes < Roda
       routing.get 'cache' do
         HealthController.cache
       end
+
+      routing.delete 'cache' do
+        HealthController.clear_cache
+      end
+
+      routing.get 'metrics' do
+        HealthController.metrics
+      end
     end
 
     routing.on 'series' do
@@ -73,7 +81,7 @@ class Routes < Roda
 
     routing.on 'search' do
       routing.get do
-        SearchController.search_by_title(routing.params['title'])
+        SearchController.search_by_title(routing.params['title'], routing.params)
       end
     end
 

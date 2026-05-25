@@ -15,6 +15,7 @@ require 'rspec'
 require 'vcr'
 require 'webmock/rspec'
 require_relative '../app'
+require_relative '../utils/observability'
 require_relative '../utils/response_cache'
 
 ENV['RACK_ENV'] = 'test'
@@ -72,5 +73,10 @@ RSpec.configure do |config|
 
   config.after do
     ResponseCache.clear
+    Observability.reset
+  end
+
+  config.before do
+    allow(Observability.logger).to receive(:info)
   end
 end

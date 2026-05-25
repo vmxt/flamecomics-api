@@ -47,13 +47,13 @@ RSpec.describe SeriesController do
 
         expect(result[:chapters].first).to include(
           chapter_id: 'chapter-token',
-          chapter_number: '12',
-          chapter_title: 'The Test Title',
           chapter_label: 'Chapter 12 - The Test Title',
-          chapter_date: '3 hours ago',
-          label: 'Chapter 12 - The Test Title',
           date: '3 hours ago'
         )
+        expect(result[:chapters].first).not_to have_key(:label)
+        expect(result[:chapters].first).not_to have_key(:chapter_number)
+        expect(result[:chapters].first).not_to have_key(:chapter_title)
+        expect(result[:chapters].first).not_to have_key(:chapter_date)
       end
     end
   end

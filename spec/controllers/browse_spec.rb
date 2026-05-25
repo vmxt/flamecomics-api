@@ -34,6 +34,32 @@ RSpec.describe BrowseController do
       result = described_class.fetch_series
       expect(result[:count]).to eq(1)
       expect(result[:comics].first[:title]).to eq('Sample Series')
+      expect(result[:pagination]).to include(page: 1, has_next_page: false)
+    end
+
+    it 'returns pagination metadata when linked pages are present' do
+      html = <<~HTML
+        <div class="mantine-Group-root">
+          <img src="/img.jpg"/>
+          <div class="mantine-Stack-root">
+            <a href="/series/123">Sample Series</a>
+          </div>
+        </div>
+        <a href="/browse?page=1">1</a>
+        <a href="/browse?page=3">3</a>
+      HTML
+
+      mock_response = double(code: 200, body: html)
+      allow(HTTParty).to receive(:get).and_return(mock_response)
+
+      result = described_class.fetch_series('page=2')
+      expect(result[:pagination]).to include(
+        page: 2,
+        next_page: 3,
+        prev_page: 1,
+        has_next_page: true,
+        total_pages: 3
+      )
     end
   end
 end

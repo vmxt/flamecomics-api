@@ -80,6 +80,24 @@ RSpec.describe SearchController do
         expect(result[:results].first[:title]).to eq('Solo Leveling: Ragnarok')
       end
 
+      it 'matches fuzzy title typos' do
+        result = described_class.search_by_title('Omniscient Readers Viewpont')
+        expect(result[:count]).to eq(1)
+        expect(result[:results].first[:title]).to eq("Omniscient Reader's Viewpoint")
+      end
+
+      it 'paginates and limits search results' do
+        result = described_class.search_by_title('the', 'limit' => '2', 'page' => '2')
+        expect(result[:count]).to eq(2)
+        expect(result[:total_count]).to be > 2
+        expect(result[:pagination]).to include(page: 2, limit: 2, prev_page: 1)
+      end
+
+      it 'passes browse filters through to the browse controller' do
+        described_class.search_by_title('Leveling', 'status' => 'Ongoing', 'genre' => 'Action')
+        expect(BrowseController).to have_received(:fetch_series).with('status=Ongoing&genre=Action')
+      end
+
       it 'matches titles containing multiple spaces or symbols' do
         result = described_class.search_by_title('The 31st Piece Overturns   the Board!!!')
         expect(result[:count]).to eq(1)

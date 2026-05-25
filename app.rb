@@ -5,11 +5,13 @@ require 'rack/cors'
 require 'json'
 require_relative 'router/routes'
 require_relative 'utils/rate_limiter'
+require_relative 'utils/request_logger'
 
 class FlamecomicsAPI < Roda
   plugin :json
   plugin :all_verbs
 
+  use RequestLogger
   use RateLimiter
 
   use Rack::Cors do |config|
