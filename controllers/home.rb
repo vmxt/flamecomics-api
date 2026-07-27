@@ -9,6 +9,7 @@ require_relative '../utils/http_client'
 require_relative '../utils/home_card_extractor'
 require_relative '../utils/home_chapter_date_extractor'
 require_relative '../utils/home_latest_updates_extractor'
+require_relative '../utils/home_novel_extractor'
 
 module Home
   extend ImageHelper
@@ -16,6 +17,7 @@ module Home
   extend HomeCardExtractor
   extend HomeChapterDateExtractor
   extend HomeLatestUpdatesExtractor
+  extend HomeNovelExtractor
 
   module_function
 

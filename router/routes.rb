@@ -3,6 +3,8 @@
 require 'roda'
 require_relative '../controllers/browse'
 require_relative '../controllers/home'
+require_relative '../controllers/novel'
+require_relative '../controllers/novel_read'
 require_relative '../controllers/read'
 require_relative '../controllers/series'
 require_relative '../controllers/search'
@@ -71,6 +73,16 @@ class Routes < Roda
 
       routing.get String do |id|
         cached("series:#{id}") { SeriesController.fetch_details(id) }
+      end
+    end
+
+    routing.on 'novel' do
+      routing.get String, String do |novel_id, chapter_id|
+        NovelReadController.fetch_read(novel_id, chapter_id)
+      end
+
+      routing.get String do |id|
+        cached("novel:#{id}") { NovelController.fetch_details(id) }
       end
     end
 

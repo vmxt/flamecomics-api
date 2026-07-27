@@ -23,7 +23,7 @@ class IndexController
       ],
       cache: {
         ttl_seconds: 180,
-        endpoints: ['/home', '/browse', '/series/:id']
+        endpoints: ['/home', '/browse', '/series/:id', '/novel/:id']
       },
       endpoints: endpoints
     }
@@ -42,6 +42,8 @@ class IndexController
       endpoint('GET', '/search?title=:title', 'Search browse results by title'),
       endpoint('GET', '/series/:id', 'Series details and normalized chapters'),
       endpoint('GET', '/series/:id/:chapter_id', 'Chapter pages/images'),
+      endpoint('GET', '/novel/:id', 'Novel details and normalized chapters'),
+      endpoint('GET', '/novel/:id/:chapter_id', 'Novel chapter text'),
       endpoint('GET', '/random', 'Redirect to a random valid series'),
       endpoint('GET', '/v1/*', 'Versioned aliases for API endpoints')
     ]

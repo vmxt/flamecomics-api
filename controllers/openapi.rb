@@ -27,12 +27,16 @@ class OpenAPIController
       '/search' => search_endpoint,
       '/series/{id}' => series_endpoint,
       '/series/{id}/{chapter_id}' => reader_endpoint,
+      '/novel/{id}' => novel_endpoint,
+      '/novel/{id}/{chapter_id}' => novel_reader_endpoint,
       '/random' => endpoint('Redirect to a random valid series', schema_ref('Error'), responses: redirect_responses),
       '/v1/home' => endpoint('Versioned home page sections', schema_ref('Home')),
       '/v1/browse' => browse_endpoint,
       '/v1/search' => search_endpoint,
       '/v1/series/{id}' => series_endpoint,
-      '/v1/series/{id}/{chapter_id}' => reader_endpoint
+      '/v1/series/{id}/{chapter_id}' => reader_endpoint,
+      '/v1/novel/{id}' => novel_endpoint,
+      '/v1/novel/{id}/{chapter_id}' => novel_reader_endpoint
     }
   end
   private_class_method :paths
@@ -93,6 +97,27 @@ class OpenAPIController
     )
   end
   private_class_method :reader_endpoint
+
+  def self.novel_endpoint
+    endpoint(
+      'Novel details',
+      schema_ref('Novel'),
+      parameters: [path_parameter('id', 'Novel id')]
+    )
+  end
+  private_class_method :novel_endpoint
+
+  def self.novel_reader_endpoint
+    endpoint(
+      'Novel chapter text',
+      schema_ref('NovelReader'),
+      parameters: [
+        path_parameter('id', 'Novel id'),
+        path_parameter('chapter_id', 'Chapter token/id')
+      ]
+    )
+  end
+  private_class_method :novel_reader_endpoint
 
   def self.endpoint(summary, schema, parameters: [], responses: nil)
     {
@@ -248,6 +273,22 @@ class OpenAPIController
           synopsis: { type: 'string', nullable: true },
           chapters: array_schema(schema_ref('Chapter'))
         ),
+        Novel: object_schema(
+          title: { type: 'string' },
+          alternative_titles: { type: 'string' },
+          poster_src: { type: 'string', nullable: true },
+          genres: array_schema({ type: 'string' }),
+          type: { type: 'string' },
+          status: { type: 'string', nullable: true },
+          author: { type: 'string' },
+          artist: { type: 'string' },
+          serialization: { type: 'string' },
+          release_year: { type: 'string' },
+          language: { type: 'string' },
+          synopsis: { type: 'string', nullable: true },
+          chapters_length: { type: 'integer' },
+          chapters: array_schema(schema_ref('Chapter'))
+        ),
         Reader: object_schema(
           series_id: { type: 'string' },
           chapter_id: { type: 'string' },
@@ -256,6 +297,16 @@ class OpenAPIController
           title: { type: 'string' },
           count: { type: 'integer' },
           img_srcs: array_schema({ type: 'string' })
+        ),
+        NovelReader: object_schema(
+          novel_id: { type: 'string' },
+          chapter_id: { type: 'string' },
+          next_chapter_id: { type: 'string', nullable: true },
+          prev_chapter_id: { type: 'string', nullable: true },
+          title: { type: 'string' },
+          chapter_title: { type: 'string' },
+          content: { type: 'string' },
+          content_html: { type: 'string' }
         ),
         CacheHealth: object_schema(
           cache: schema_ref('CacheStats'),

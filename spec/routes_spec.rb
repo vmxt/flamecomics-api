@@ -93,7 +93,8 @@ RSpec.describe 'FlamecomicsAPI Routes' do
       body = JSON.parse(last_response.body)
       expect(body["openapi"]).to eq("3.0.3")
       expect(body["paths"]).to include("/v1/home", "/health/cache")
-      expect(body.dig("components", "schemas")).to include("Home", "Browse", "Series", "Reader", "Error")
+      expect(body.dig("components", "schemas")).to include("Home", "Browse", "Series", "Reader", "Novel",
+                                                           "NovelReader", "Error")
       expect(body.dig("paths", "/search", "get", "parameters")).to include(
         include("name" => "limit"),
         include("name" => "genre")
@@ -140,6 +141,41 @@ RSpec.describe 'FlamecomicsAPI Routes' do
       get '/series/1/2'
       expect(last_response.status).to eq(200)
       expect(JSON.parse(last_response.body)["title"]).to eq("Mock Chapter")
+    end
+  end
+
+  describe 'GET /novel/:id' do
+    it 'returns novel details' do
+      fake_data = { title: "Mock Novel" }
+      allow(NovelController).to receive(:fetch_details).with("2").and_return(fake_data)
+
+      get '/novel/2'
+
+      expect(last_response.status).to eq(200)
+      expect(JSON.parse(last_response.body)["title"]).to eq("Mock Novel")
+      expect(last_response.headers["Cache-Control"]).to eq("public, max-age=180")
+    end
+
+    it 'caches novel details by id' do
+      allow(NovelController).to receive(:fetch_details).with("2").once.and_return({ title: "Mock Novel" })
+
+      get '/novel/2'
+      get '/novel/2'
+
+      expect(last_response.status).to eq(200)
+      expect(JSON.parse(last_response.body)["title"]).to eq("Mock Novel")
+    end
+  end
+
+  describe 'GET /novel/:id/:chapter_id' do
+    it 'returns novel chapter text' do
+      fake_data = { title: "Mock Novel - Chapter 1", content: "Chapter body" }
+      allow(NovelReadController).to receive(:fetch_read).with("2", "550584af665bc8dc").and_return(fake_data)
+
+      get '/novel/2/550584af665bc8dc'
+
+      expect(last_response.status).to eq(200)
+      expect(JSON.parse(last_response.body)["content"]).to eq("Chapter body")
     end
   end
 

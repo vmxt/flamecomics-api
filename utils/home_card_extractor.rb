@@ -3,6 +3,9 @@
 require 'json'
 
 module HomeCardExtractor
+  CARD_SELECTOR = '.m_96bdd299.mantine-Grid-col'
+  SERIES_TITLE_SELECTOR = 'h3 a[href^="/series/"], a.mantine-Text-root[data-size="md"][href^="/series/"], h3 span'
+
   private
 
   def extract_spotlight(doc)
@@ -66,12 +69,13 @@ module HomeCardExtractor
     section = doc.at_css(selector)
     return [] unless section
 
-    section.css('.m_96bdd299.mantine-Grid-col').filter_map do |elem|
+    section.css(CARD_SELECTOR).filter_map do |elem|
       link = elem.at_css('a[href^="/series/"]')
       next unless link
 
       id = link['href']&.split('/')&.last
-      title = elem.at_css('h3 span')&.text&.strip
+      title = elem.at_css(SERIES_TITLE_SELECTOR)&.text&.strip
+      title = link['title']&.strip if title.to_s.empty?
 
       img_url = normalize_image_url(elem.at_css('img')&.[]('src'))
       next unless id && title && img_url
@@ -86,33 +90,9 @@ module HomeCardExtractor
     end
   end
 
-  def extract_novels(doc)
-    section = doc.at_css('#novels')
-    return [] unless section
-
-    section.css('.m_96bdd299.mantine-Grid-col').filter_map do |elem|
-      link = elem.at_css('a[href^="/novel/"]')
-      next unless link
-
-      id = link['href']&.split('/')&.last
-      title = elem.at_css('h3 span')&.text&.strip
-      img_url = normalize_image_url(elem.at_css('img')&.[]('src'))
-      next unless id && title && img_url
-
-      {
-        id: id,
-        title: title,
-        img_url: img_url,
-        language: extract_language(elem),
-        likes: parse_likes(elem.at_css('svg + span')&.text),
-        status: elem.css('.mantine-Badge-label').last&.text&.strip
-      }
-    end
-  end
-
   def extract_language(elem)
     language = elem.at_css('[data-nosnippet] span')&.text&.strip
-    language unless language&.empty?
+    language if language && !language.empty?
   end
 
   def parse_likes(text)
